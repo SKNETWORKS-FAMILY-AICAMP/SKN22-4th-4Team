@@ -13,7 +13,7 @@
 ### 2. 관계 데이터 추출 (ETL)
 비정형 텍스트에서 구조화된 기업 관계 데이터를 추출하는 과정입니다.
 - **실행 스크립트**: `scripts/build_company_relationships.py`
-- **사용 모델**: OpenAI GPT-4.1-mini
+- **사용 모델**: OpenAI GPT-4.1-mini / Gemini 2.5 Flash
 - **추출 방식**: 
   - 텍스트 본문 분석 -> `(Source Company, Target Company, Relationship Type)` 트리플렛 추출
   - 병렬 처리(Parallel Processing)를 통해 대량의 문서 처리

@@ -1,6 +1,7 @@
 # 02. 시스템 아키텍처 (System Architecture)
 
 ## 📌 개요
+
 본 프로젝트는 **Hybrid RAG (Vector Search + Graph Analysis)** 기반의 금융 분석 챗봇 시스템입니다.
 
 ## 🏗️ 전체 아키텍처
@@ -47,13 +48,15 @@ graph TD
 ```
 
 ### 1. Frontend (User Interface)
+
 - **Framework**: Django (MVT Pattern) + Bootstrap (Premium Glassmorphism)
-- **Features**: 
+- **Features**:
   - 실시간 채팅 인터페이스 (`AnalystChatbot`)
   - 대화형 차트 및 데이터 시각화
   - 사용자 및 관심 기업 관리 (Sidebar)
 
 ### 2. Backend & AI Engine
+
 - **RAG Engine**:
   - **Vector Store**: 텍스트 의미 검색 (Semantic Search)
   - **GraphRAG**: **Neo4j** Cypher 쿼리 + `NetworkX` 기반 기업 관계망 분석
@@ -63,6 +66,7 @@ graph TD
 - **LangSmith**: LLM 콜 트레이싱 및 모니터링 (선택적)
 
 ### 3. Database & Infrastructure
+
 - **Supabase (PostgreSQL)**:
   - `pgvector`: 벡터 임베딩 저장 및 검색
   - `Relational Tables`: 기업 정보, 사용자 정보, 관계 데이터 관리
@@ -112,7 +116,9 @@ graph TD
         L --> M{GPT-4.1-mini / Gemini}
         M --> N[입체적 투자 인사이트 답변]
     end
+    end
 ```
+
 ### 주요 기능
 
 - **관계망 추론**: 특정 기업의 악재가 공급망 내 어떤 기업에 파급될지 분석합니다.
@@ -122,35 +128,31 @@ graph TD
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
-- **Language**: Python 3.10+
+
+- **Language**: Python 3.12
 - **LLM**: GPT-4.1-mini (기본) / Gemini 2.5 Flash (선택)
 - **Graph DB**: Neo4j (Cypher) + NetworkX (분석)
 - **Vector DB**: Supabase pgvector
 - **Tracing**: LangSmith (선택적)
-- **Key Libraries**: `google-generativeai`, `openai`, `neo4j`, `supabase`, `networkx`, `streamlit`
+- **Key Libraries**: `google-generativeai`, `openai`, `neo4j`, `supabase`, `networkx`, `django`
 
 ## 📂 프로젝트 구조 (Directory Structure)
 
 ```bash
-SKN22-3rd-4Team/
-├── SKN22-4th-4Team/            # [NEW] Django Web Application
-│   ├── config/                 # 프로젝트 설정 (urls, settings)
-│   ├── finance_app/            # 메인 앱 (views, templates, static/css)
-│   └── manage.py               # Django 관리 스크립트
-├── scripts/                    # 유틸리티 및 배치 스크립트
-│   ├── build_company_relationships.py  # [ETL] 기업 관계 추출
-│   └── migrate_to_neo4j.py            # Supabase → Neo4j 마이그레이션
-├── src/                        # 데이터 파이프라인 및 핵심 로직
+SKN22-4th-4Team/
+├── config/                     # Django 프로젝트 전역 설정 (settings, urls, wsgi)
+├── finance_app/                # 메인 Django 애플리케이션 (views, templates, static/css)
+├── src/                        # 핵심 데이터 파이프라인 및 비즈니스 로직
 │   ├── core/                   # 코어 로직 (Validator, ChatConnector)
-│   ├── data/                   # 데이터 클라이언트 (Finnhub, Supabase)
-│   ├── rag/                    # RAG 엔진
-│   │   ├── analyst_chat.py     # 챗봇 비즈니스 로직
-│   │   ├── graph_rag.py        # [CORE] Neo4j + NetworkX 그래프 분석
-│   │   ├── llm_client.py       # [NEW] 통합 LLM Client (Gemini/OpenAI)
-│   │   ├── report_generator.py # 투자 리포트 생성기
-│   │   └── vector_store.py     # 벡터 검색
-│   ├── tools/                  # 환율, 즐겨찾기 등
-│   └── ui/                     # [Legacy] Streamlit 페이지 및 헬퍼
-├── .env                        # 환경 변수 (Gemini, OpenAI, Neo4j 등)
-└── requirements.txt            # 의존성 패키지
+│   ├── data/                   # API 클라이언트 (Finnhub, Supabase, SEC)
+│   ├── prompts/                # 시스템/챗봇 프롬프트 관리
+│   ├── rag/                    # RAG 엔진 (Chat, Report, GraphRAG, LLM Client)
+│   ├── sql/                    # SQL 변환 관련 모듈
+│   ├── tools/                  # 환율, 즐겨찾기, 스케줄러 도구
+│   └── utils/                  # 유틸리티 (Plotly 차트, PDF, 티커 변환)
+├── scripts/                    # 유틸리티 및 배치 스크립트
+├── docs/                       # 프로젝트 문서 및 이미지
+├── manage.py                   # Django 관리 도구
+├── requirements.txt            # 파이썬 의존성
+└── .env                        # 환경 변수 설정 (gitignored)
 ```

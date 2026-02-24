@@ -30,8 +30,8 @@
 
 ```mermaid
 graph TD
-    User([👤 사용자]) -->|1. 접속| Login[🔐 로그인/회원가입]
-    Login -->|2. 인증 성공| UI[💻 Django Web App (Premium UI)]
+    User(["👤 사용자"]) -->|1. 접속| Login["🔐 로그인/회원가입"]
+    Login -->|2. 인증 성공| UI["💻 Django Web App (Premium UI)"]
     
     subgraph Frontend Logic
         Login -->|Auth Request| Auth[🔐 Supabase Auth]
@@ -41,7 +41,7 @@ graph TD
     end
 
     subgraph "Data & State"
-        Auth <-->|Verify| UserDB[(👥 Users Table)]
+        Auth <-->|Verify| UserDB[("👥 Users Table")]
         Watchlistmgr <-->|Sync| UserDB
     end
 
@@ -49,8 +49,8 @@ graph TD
         Validator -->|Valid Query| Agent[🤖 LLM Client]
         ReportGen -->|Data Fetch| Retriever[🔍 Data Retriever]
         
-        Agent <-->|Vector Search| VectorDB[(🗄️ Supabase pgvector)]
-        Agent <-->|Graph Search| GraphDB[(🕸️ Neo4j GraphDB)]
+        Agent <-->|Vector Search| VectorDB[("🗄️ Supabase pgvector")]
+        Agent <-->|Graph Search| GraphDB[("🕸️ Neo4j GraphDB")]
         
         Retriever -->|Parallel Fetch| VectorDB
         Retriever -->|Parallel Fetch| GraphDB
