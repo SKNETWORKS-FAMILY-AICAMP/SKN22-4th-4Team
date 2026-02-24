@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-12">
+        <h2 class="main-header mb-2 text-primary-accent fw-bold"><i class="bi bi-display me-2"></i>미국 재무제표 분석 대시보드</h2>
+        <p class="text-secondary fs-5 mb-0">AI 기반 실시간 시장 동향 및 기업 분석</p>
+    </div>
+</div>
+
+<!-- 환율 정보 바 -->
+{% if exchange_rates %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="premium-card py-2 px-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div class="d-flex flex-wrap gap-4">
+                    {% for name, rate in exchange_rates.items %}
+                        <div class="d-flex flex-column">
+                            <span class="text-secondary small fw-bold">{{ name }}</span>
+                            {% if rate.price %}
+                                <span class="fs-5">
+                                    <strong>{{ rate.price|floatformat:2 }}</strong>
+                                    {% if rate.change >= 0 %}
+                                        <span class="badge badge-green ms-2">▲ {{ rate.change|floatformat:2 }}%</span>
+                                    {% else %}
+                                        <span class="badge badge-red ms-2">▼ {{ rate.change|floatformat:2 }}%</span>
+                                    {% endif %}
+                                </span>
+                            {% else %}
+                                <strong>{{ rate }}</strong>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if update_time %}
+                <span class="text-muted small"><i class="bi bi-clock me-1"></i>{{ update_time }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 메트릭 카드 -->
+<div class="row mb-5 g-4">
+    <div class="col-md-3">
+        <div class="premium-card h-100 text-center">
+            <div class="card-body p-0">
+                <div class="mb-3"><i class="bi bi-building fs-1 text-primary-accent opacity-75"></i></div>
+                <h6 class="text-secondary text-uppercase tracking-wide mb-2">등록된 기업</h6>
+                <h2 class="card-title fw-bold mb-0 text-white">{{ company_count|default:"0" }}개</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="premium-card h-100 text-center">
+            <div class="card-body p-0">
+                <div class="mb-3"><i class="bi bi-cash-stack fs-1 text-secondary opacity-75"></i></div>
+                <h6 class="text-secondary text-uppercase tracking-wide mb-2">평균 시가총액</h6>
+                <h2 class="card-title fw-bold mb-1 text-white">$1.2T</h2>
+                <span class="badge badge-green small">▲ +2.5%</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="premium-card h-100 text-center">
+            <div class="card-body p-0">
+                <div class="mb-3"><i class="bi bi-graph-up-arrow fs-1 text-secondary opacity-75"></i></div>
+                <h6 class="text-secondary text-uppercase tracking-wide mb-2">평균 PER</h6>
+                <h2 class="card-title fw-bold mb-1 text-white">24.5</h2>
+                <span class="badge badge-red small">▼ -0.8%</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="premium-card h-100 text-center">
+             <div class="card-body p-0">
+                <div class="mb-3"><i class="bi bi-calendar-check fs-1 text-secondary opacity-75"></i></div>
+                <h6 class="text-secondary text-uppercase tracking-wide mb-2">실적 발표 예정</h6>
+                <h2 class="card-title fw-bold mb-1 text-white">5개</h2>
+                <span class="text-muted small">이번주</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 탭 인터페이스 -->
+<ul class="nav nav-pills mb-4 gap-2" id="homeTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="top-tab" data-bs-toggle="tab" data-bs-target="#top-tab-pane" type="button" role="tab" aria-controls="top-tab-pane" aria-selected="true"><i class="bi bi-trophy me-2"></i>매출 상위 기업</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search-tab-pane" type="button" role="tab" aria-controls="search-tab-pane" aria-selected="false"><i class="bi bi-search me-2"></i>기업 검색</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#status-tab-pane" type="button" role="tab" aria-controls="status-tab-pane" aria-selected="false"><i class="bi bi-database me-2"></i>DB 현황</button>
+  </li>
+   <li class="nav-item" role="presentation">
+    <button class="nav-link" id="guide-tab" data-bs-toggle="tab" data-bs-target="#guide-tab-pane" type="button" role="tab" aria-controls="guide-tab-pane" aria-selected="false"><i class="bi bi-lightning-charge me-2"></i>빠른 시작</button>
+  </li>
+</ul>
+
+<div class="tab-content" id="homeTabsContent">
+  <!-- 매출 상위 기업 탭 -->
+  <div class="tab-pane fade show active" id="top-tab-pane" role="tabpanel" aria-labelledby="top-tab" tabindex="0">
+      <h4 class="mb-4 fw-semibold">2025년 매출 상위 기업</h4>
+      {% if top_revenue_data %}
+      <div class="row g-4">
+          <div class="col-xl-7">
+              <div class="premium-card p-0 overflow-hidden">
+                  <div class="table-responsive m-0">
+                      <table class="table table-hover mb-0">
+                          <thead>
+                              <tr>
+                                  <th>티커</th>
+                                  <th>기업명</th>
+                                  <th class="text-end">매출</th>
+                                  <th class="text-end">순이익</th>
+                                  <th class="text-end">총자산</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for row in top_revenue_data %}
+                              <tr>
+                                  <td><span class="badge bg-main border text-white border-secondary px-2 py-1">{{ row.ticker }}</span></td>
+                                  <td class="fw-medium text-white">{{ row.company_name }}</td>
+                                  <td class="text-end text-white">{{ row.revenue }}</td>
+                                  <td class="text-end text-success">{{ row.net_income }}</td>
+                                  <td class="text-end text-secondary">{{ row.total_assets }}</td>
+                              </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+          <div class="col-xl-5">
+              <div class="premium-card h-100 d-flex flex-column">
+                  <h5 class="fw-semibold mb-3">매출 상위 10개 기업 <span class="text-muted fs-6 fw-normal">(십억 USD)</span></h5>
+                  <div id="topRevenueChart" class="flex-grow-1" style="min-height: 350px;"></div>
+              </div>
+          </div>
+      </div>
+      {% else %}
+      <div class="alert alert-warning bg-transparent border-warning text-warning">2025년 데이터가 아직 없습니다.</div>
+      {% endif %}
+  </div>
+
+  <!-- 기업 검색 탭 -->
+  <div class="tab-pane fade" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
+      <h4 class="mb-4 fw-semibold">기업 검색</h4>
+      <div class="premium-card">
+          <div class="input-group mb-4">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control form-control-lg" id="companySearchInput" placeholder="예: AAPL, Apple, Microsoft" aria-label="기업 검색">
+            <button class="btn btn-premium px-4" type="button" id="companySearchBtn">검색</button>
+          </div>
+          <div id="searchResults">
+              <div class="text-center py-5" id="searchPlaceholder">
+                  <i class="bi bi-search display-1 opacity-25 mb-4"></i>
+                  <h5 class="mb-2">티커 또는 기업명으로 검색해보세요.</h5>
+                  <p class="small text-muted">Supabase DB에 등록된 S&P 500 기업을 검색합니다.</p>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- DB 현황 탭 -->
+  <div class="tab-pane fade" id="status-tab-pane" role="tabpanel" aria-labelledby="status-tab" tabindex="0">
+      <h4 class="mb-4 fw-semibold"><i class="bi bi-floppy me-2 text-primary-accent"></i>데이터베이스 현황</h4>
+      <div class="row g-4">
+          <div class="col-md-6">
+               <div class="premium-card h-100 d-flex flex-column">
+                  <h5 class="fw-semibold mb-3 text-center">섹터별 기업 분포</h5>
+                  <div id="sectorDistributionChart" class="flex-grow-1" style="min-height: 350px;"></div>
+              </div>
+          </div>
+          <div class="col-md-6">
+               <div class="premium-card h-100 d-flex flex-column">
+                  <h5 class="fw-semibold mb-3">등록된 기업 (일부)</h5>
+                  {% if db_companies_sample %}
+                  <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                      <table class="table table-hover table-sm mb-0">
+                          <thead>
+                              <tr><th>ticker</th><th>company_name</th></tr>
+                          </thead>
+                          <tbody>
+                              {% for c in db_companies_sample %}
+                              <tr><td class="fw-medium">{{ c.ticker }}</td><td>{{ c.company_name }}</td></tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  </div>
+                  {% else %}
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted">
+                      <i class="bi bi-database-x display-1 opacity-25 mb-3"></i>
+                      <p>DB 연결을 확인해주세요.</p>
+                  </div>
+                  {% endif %}
+              </div>
+          </div>
+      </div>
+  </div>
+  
+  <!-- 빠른 시작 가이드 탭 -->
+  <div class="tab-pane fade" id="guide-tab-pane" role="tabpanel" aria-labelledby="guide-tab" tabindex="0">
+      <h4 class="mb-4 fw-semibold text-white">빠른 시작 가이드</h4>
+      <div class="row mt-4 g-4">
+          <div class="col-md-6">
+              <div class="premium-card h-100 position-relative overflow-hidden">
+                  <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                      <i class="bi bi-grid-1x2-fill display-1 text-primary-accent"></i>
+                  </div>
+                  <h5 class="text-primary-accent mb-3 fw-bold"><i class="bi bi-1-circle-fill me-2"></i>홈 (Home)</h5>
+                  <ul class="list-unstyled text-light mt-3 position-relative z-1">
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-primary-accent me-2 mt-1"></i> <div><strong>매출 상위 기업:</strong> 2024/2025년 기준 매출 Top 기업의 재무 현황 조회</div></li>
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-primary-accent me-2 mt-1"></i> <div><strong>기업 검색:</strong> 티커/기업명으로 검색 및 관심 기업 등록</div></li>
+                      <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-primary-accent me-2 mt-1"></i> <div><strong>DB 현황:</strong> 수집된 데이터 및 섹터별 분포 확인</div></li>
+                  </ul>
+              </div>
+          </div>
+          <div class="col-md-6">
+              <div class="premium-card h-100 position-relative overflow-hidden">
+                  <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                      <i class="bi bi-robot display-1 text-ai-accent"></i>
+                  </div>
+                  <h5 class="text-ai-accent mb-3 fw-bold"><i class="bi bi-2-circle-fill me-2"></i>투자 인사이트 (Insights)</h5>
+                  <ul class="list-unstyled text-light mt-3 position-relative z-1">
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-ai-accent me-2 mt-1"></i> <div><strong>AI 애널리스트:</strong> 챗봇과 대화하며 투자 궁금증 해결</div></li>
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-ai-accent me-2 mt-1"></i> <div><strong>실시간 데이터:</strong> 자연어 질문 대응 (예: "애플 재무 보여줘")</div></li>
+                      <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-ai-accent me-2 mt-1"></i> <div><strong>맞춤형 분석:</strong> 사용자의 관심사에 맞춘 투자 조언 제공</div></li>
+                  </ul>
+              </div>
+          </div>
+          <div class="col-md-6">
+              <div class="premium-card h-100 position-relative overflow-hidden">
+                   <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                      <i class="bi bi-calendar-event-fill display-1 text-warning"></i>
+                  </div>
+                  <h5 class="text-warning mb-3 fw-bold"><i class="bi bi-3-circle-fill me-2"></i>실적 캘린더 (Calendar)</h5>
+                   <ul class="list-unstyled text-light mt-3 position-relative z-1">
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-warning me-2 mt-1"></i> <div><strong>관심 기업 일정:</strong> 내가 등록한 기업의 실적 발표일 확인</div></li>
+                      <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-warning me-2 mt-1"></i> <div><strong>시장 예측:</strong> EPS 예상치와 실제 발표치(Surprise) 비교</div></li>
+                  </ul>
+              </div>
+          </div>
+          <div class="col-md-6">
+              <div class="premium-card h-100 position-relative overflow-hidden">
+                  <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                      <i class="bi bi-file-earmark-bar-graph-fill display-1 text-success"></i>
+                  </div>
+                  <h5 class="text-success mb-3 fw-bold"><i class="bi bi-4-circle-fill me-2"></i>레포트 생성 (Reports)</h5>
+                  <ul class="list-unstyled text-light mt-3 position-relative z-1">
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-success me-2 mt-1"></i> <div><strong>AI 투자 레포트:</strong> 특정/복수 기업에 대한 심층 분석 보고서 생성</div></li>
+                      <li class="mb-2 d-flex align-items-start"><i class="bi bi-check2-circle text-success me-2 mt-1"></i> <div><strong>비교 분석:</strong> 여러 경쟁사를 동시에 비교 분석</div></li>
+                      <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-success me-2 mt-1"></i> <div><strong>차트 포함:</strong> 주가, 거래량, 재무 차트가 포함된 PDF 레포트 다운로드</div></li>
+                  </ul>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+
+<!-- 탭 기능 및 Plotly 차트 렌더링 스크립트 -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 차트 리사이즈 (탭 전환 시)
+        const tabs = document.querySelectorAll('#homeTabs .nav-link');
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function() {
+                if(this.id === 'top-tab') {
+                    setTimeout(() => Plotly.Plots.resize('topRevenueChart'), 50);
+                } else if (this.id === 'status-tab') {
+                    setTimeout(() => Plotly.Plots.resize('sectorDistributionChart'), 50);
+                }
+            });
+        });
+
+        // ==========================================
+        // Plotly 차트 렌더링
+        // ==========================================
+        
+        // Theme-aware font color
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        const fontColor = isDark ? '#f8f9fa' : '#1e293b';
+        const gridColor = isDark ? '#495057' : '#dee2e6';
+
+        // 1. 매출 상위 기업 바 차트 (가로 방향)
+        const rawTopRevenueData = '{{ top_revenue_json|escapejs }}';
+        if (rawTopRevenueData && rawTopRevenueData !== '[]') {
+            const topRevenueData = JSON.parse(rawTopRevenueData);
+            
+            // 가로 바는 아래→위로 그려지므로 반전 (큰 값이 위에 오도록)
+            topRevenueData.reverse();
+            
+            const tickers = topRevenueData.map(d => d.ticker);
+            const revenues = topRevenueData.map(d => d.revenue);
+
+            const revenueTrace = {
+                y: tickers,
+                x: revenues,
+                type: 'bar',
+                orientation: 'h',
+                marker: {
+                    color: revenues,
+                    colorscale: 'Viridis'
+                },
+                text: revenues.map(r => '$' + r.toFixed(1) + 'B'),
+                textposition: 'auto',
+                textfont: { color: fontColor, size: 11 }
+            };
+
+            const revenueLayout = {
+                plot_bgcolor: 'transparent',
+                paper_bgcolor: 'transparent',
+                font: { color: fontColor },
+                margin: { t: 10, b: 30, l: 60, r: 20 },
+                xaxis: { 
+                    gridcolor: gridColor, 
+                    zerolinecolor: gridColor,
+                    title: '매출 (십억 USD)'
+                },
+                yaxis: { 
+                    gridcolor: gridColor, 
+                    zerolinecolor: gridColor,
+                    automargin: true
+                }
+            };
+            
+            window.revenueChart = Plotly.newPlot('topRevenueChart', [revenueTrace], revenueLayout, {responsive: true, displayModeBar: false});
+        } else {
+             document.getElementById('topRevenueChart').innerHTML = '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted">데이터 없음</p></div>';
+        }
+
+        // 2. 섹터별 파이 차트
+        const rawSectorData = '{{ sector_counts_json|escapejs }}';
+        if (rawSectorData && rawSectorData !== '[]') {
+            const sectorData = JSON.parse(rawSectorData);
+            const labels = sectorData.map(d => d.label);
+            const values = sectorData.map(d => d.value);
+
+            const sectorTrace = {
+                values: values,
+                labels: labels,
+                type: 'pie',
+                hole: 0.4,
+                textinfo: "label+percent",
+                textposition: "inside",
+                 marker: {
+                    colors: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0']
+                }
+            };
+
+            const sectorLayout = {
+                plot_bgcolor: 'transparent',
+                paper_bgcolor: 'transparent',
+                font: { color: fontColor },
+                margin: { t: 20, b: 20, l: 20, r: 20 },
+                showlegend: false
+            };
+            
+            window.sectorChart = Plotly.newPlot('sectorDistributionChart', [sectorTrace], sectorLayout, {responsive: true, displayModeBar: false});
+        } else {
+            document.getElementById('sectorDistributionChart').innerHTML = '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted">데이터 없음</p></div>';
+        }
+
+        // ============================================
+        // 기업 검색 (Company Search) AJAX
+        // ============================================
+        const searchInput = document.getElementById('companySearchInput');
+        const searchBtn = document.getElementById('companySearchBtn');
+        const searchResults = document.getElementById('searchResults');
+        const searchPlaceholder = document.getElementById('searchPlaceholder');
+
+        function getCookie(name) {
+            let v = null; document.cookie.split(';').forEach(c => {
+                c = c.trim(); if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+            }); return v;
+        }
+
+        function doSearch() {
+            const q = searchInput.value.trim();
+            if (!q) return;
+            searchResults.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> 검색 중...</div>';
+            fetch(`{% url 'finance_app:search_companies_api' %}?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    const rows = data.results || [];
+                    if (rows.length === 0) {
+                        searchResults.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-emoji-frown display-4 mb-2 d-block"></i>검색 결과가 없습니다.</div>';
+                        return;
+                    }
+                    let html = '<div class="table-responsive"><table class="table table-hover table-sm mb-0">';
+                    html += '<thead><tr><th>티커</th><th>기업명</th><th>한글명</th><th>섹터</th><th></th></tr></thead><tbody>';
+                    rows.forEach(r => {
+                        html += `<tr>
+                            <td><span class="badge bg-main border border-secondary px-2 py-1 fw-bold">${r.ticker}</span></td>
+                            <td class="fw-medium">${r.company_name}</td>
+                            <td class="text-secondary">${r.korean_name || '-'}</td>
+                            <td class="text-secondary small">${r.sector || '-'}</td>
+                            <td><button class="btn btn-sm btn-outline-warning py-0 px-2" onclick="addToWatchlistFromSearch('${r.ticker}', this)" title="관심 기업 추가"><i class="bi bi-star"></i></button></td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                    searchResults.innerHTML = html;
+                })
+                .catch(() => { searchResults.innerHTML = '<div class="text-center py-4 text-danger">검색 오류 발생</div>'; });
+        }
+
+        if (searchBtn) searchBtn.addEventListener('click', doSearch);
+        if (searchInput) searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+        window.addToWatchlistFromSearch = function(ticker, btn) {
+            fetch('{% url "finance_app:watchlist_add" %}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                body: JSON.stringify({ticker})
+            }).then(r => r.json()).then(data => {
+                btn.innerHTML = '<i class="bi bi-star-fill"></i>';
+                btn.classList.replace('btn-outline-warning', 'btn-warning');
+                btn.disabled = true;
+                // Refresh sidebar watchlist if present
+                if (typeof loadWatchlist === 'function') loadWatchlist();
+            });
+        };
+    });
+</script>
+
+{% endblock %}

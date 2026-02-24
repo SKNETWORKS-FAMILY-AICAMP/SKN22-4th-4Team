@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    /* Gemini-style layout */
+    .chat-wrapper {
+        height: calc(100vh - 120px); /* Adjust based on navbar height */
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .chat-container {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 2rem 10%;
+        scroll-behavior: smooth;
+    }
+    
+    /* Hide scrollbar for cleaner look */
+    .chat-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    .chat-container::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+    
+    .chat-message {
+        display: flex;
+        margin-bottom: 2rem;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .chat-message.user {
+        justify-content: flex-end;
+    }
+    
+    .chat-message.bot {
+        justify-content: flex-start;
+    }
+    
+    .message-bubble {
+        max-width: 80%;
+        padding: 1rem 1.25rem;
+        line-height: 1.6;
+    }
+    
+    .chat-message.user .message-bubble {
+        background-color: var(--primary-accent);
+        color: white;
+        border-radius: 20px 20px 4px 20px;
+        font-weight: 500;
+    }
+    
+    .chat-message.bot .message-bubble {
+        background-color: transparent;
+        color: var(--text-color);
+        border-radius: 4px 20px 20px 20px;
+    }
+    
+    /* Bot Avatar */
+    .bot-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background-color: var(--ai-accent);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    /* Markdown Styling in Bot Message */
+    .markdown-body {
+        font-family: inherit;
+    }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        color: #fff;
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .markdown-body pre {
+        background-color: #0d1117;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        border: 1px solid var(--border-color);
+    }
+    .markdown-body code {
+        color: #ff7b72;
+        background: rgba(255,255,255,0.1);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+    .markdown-body p:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Floating Input Field */
+    .chat-input-wrapper {
+        padding: 1rem 10%;
+        background: linear-gradient(to top, var(--bg-color) 70%, transparent);
+    }
+    
+    .chat-input-container {
+        display: flex;
+        background-color: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 30px;
+        padding: 0.5rem;
+        align-items: center;
+        transition: border-color 0.2s;
+    }
+    
+    .chat-input-container:focus-within {
+        border-color: var(--primary-accent);
+    }
+    
+    .chat-input-container input {
+        background: transparent;
+        border: none;
+        color: white;
+        box-shadow: none !important;
+        padding-left: 1rem;
+    }
+    
+    .chat-input-container input:focus {
+        background: transparent;
+    }
+    
+    .chat-input-container .btn-send {
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--primary-accent);
+        color: white;
+        border: none;
+        transition: transform 0.2s;
+    }
+    
+    .chat-input-container .btn-send:hover {
+        transform: scale(1.05);
+    }
+    
+    .typing-indicator span {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background-color: var(--text-color);
+        border-radius: 50%;
+        margin: 0 2px;
+        animation: typing 1.4s infinite ease-in-out both;
+        opacity: 0.6;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes typing {
+        0%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-6px); }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row h-100">
+    <div class="col-12 h-100">
+        <div class="chat-wrapper glass-effect">
+            <!-- Chat Header -->
+             <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="border-color: var(--border-color) !important;">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-robot fs-4 text-ai-accent me-2"></i>
+                    <span class="fs-5 fw-bold text-white">AI 투자 애널리스트</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="clear-chat-btn"><i class="bi bi-trash me-1"></i>대화 지우기</button>
+            </div>
+
+            <!-- Chat History -->
+            <div class="chat-container d-flex flex-column" id="chat-box">
+                <!-- Welcome Message -->
+                <div class="chat-message bot">
+                    <div class="bot-avatar"><i class="bi bi-stars"></i></div>
+                    <div class="message-bubble">
+                        <div class="markdown-body">
+                            <p class="fs-5 fw-bold text-white mb-2">안녕하세요! 투자 여정을 함께할 AI 어시스턴트입니다.</p>
+                            <p class="text-secondary">미국 상장사에 대한 실시간 데이터 분석, 재무 상태 등 무엇이든 물어보세요.</p>
+                            <div class="mt-4 p-3 rounded bg-main border border-secondary opacity-75">
+                                <p class="small text-muted mb-2 fw-bold text-uppercase tracking-wide">💡 추천 질문</p>
+                                <ul class="list-unstyled mb-0 text-light small">
+                                    <li class="mb-2"><i class="bi bi-arrow-right-short text-primary-accent me-1"></i> "애플(AAPL)의 최근 실적을 요약해줘"</li>
+                                    <li class="mb-2"><i class="bi bi-arrow-right-short text-primary-accent me-1"></i> "엔비디아와 AMD의 분기 매출을 비교해볼래?"</li>
+                                    <li><i class="bi bi-arrow-right-short text-primary-accent me-1"></i> "최근 가장 핫한 AI 관련 주식은 무엇인가요?"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Floating Input Form -->
+            <div class="chat-input-wrapper">
+                <form id="chat-form" onsubmit="sendMessage(event)">
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" class="form-control" placeholder="메시지를 입력하세요..." autocomplete="off">
+                        <button class="btn-send" type="submit" id="send-btn">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </form>
+                 <div class="text-center mt-2 opacity-50">
+                     <small class="text-secondary" style="font-size: 0.75rem;">AI는 실수를 할 수 있습니다. 중요한 정보를 확인하세요.</small>
+                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Markdown Parser -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- DOM Purify to prevent XSS from Markdown -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<!-- Plotly for Charts -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatForm = document.getElementById('chat-form');
+    let chartCounter = 0;
+
+    // Scroll chat to bottom
+    function scrollToBottom() {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Append User Message to Chat UI
+    function appendUserMessage(message) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message user';
+        msgDiv.innerHTML = `
+            <div class="message-bubble">
+                ${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            </div>
+        `;
+        chatBox.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    // Append Bot Typing Indicator
+    function appendTypingIndicator() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message bot typing-message';
+        msgDiv.id = 'typing-indicator';
+        msgDiv.innerHTML = `
+            <div class="bot-avatar"><i class="bi bi-robot"></i></div>
+            <div class="message-bubble d-flex align-items-center">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        `;
+        chatBox.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    // Remove Typing Indicator
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // Append Bot Message to Chat UI
+    function appendBotMessage(content, chartDataStr) {
+        removeTypingIndicator();
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message bot';
+        
+        // Parse Markdown -> HTML -> Sanitize
+        const rawHtml = marked.parse(content);
+        const cleanHtml = DOMPurify.sanitize(rawHtml);
+        
+        let innerHtml = `
+            <div class="bot-avatar"><i class="bi bi-stars"></i></div>
+            <div class="message-bubble">
+                <div class="markdown-body text-break">${cleanHtml}</div>
+        `;
+
+        let chartContainerId = null;
+
+        // Add Chart Container if chart data exists
+        if (chartDataStr) {
+            chartCounter++;
+            chartContainerId = `chat-chart-${chartCounter}`;
+            innerHtml += `
+                <div class="mt-4 bg-main rounded shadow-sm border border-secondary p-3 w-100" style="min-width: 500px;">
+                    <div id="${chartContainerId}" style="height: 400px; width: 100%;"></div>
+                </div>
+            `;
+        }
+
+        innerHtml += `</div>`;
+        msgDiv.innerHTML = innerHtml;
+        chatBox.appendChild(msgDiv);
+        
+        // Render Plotly Chart if there is chart data
+        if (chartDataStr && chartContainerId) {
+            try {
+                // Determine if JSON string or object
+                const dataObj = typeof chartDataStr === 'string' ? JSON.parse(chartDataStr) : chartDataStr;
+                
+                // Plotly format from Streamlit's typical plot returning json string or dict
+                // We'll trust whatever structure backend sends assuming it matches Plotly.newPlot signature
+                // For simplicity, we assume standard layout overrides for dark theme
+                let layout = dataObj.layout || {};
+                layout.plot_bgcolor = 'transparent';
+                layout.paper_bgcolor = 'transparent';
+                layout.font = { color: '#f8f9fa' };
+                layout.margin = { t: 40, b: 40, l: 40, r: 20 };
+                
+                Plotly.newPlot(chartContainerId, dataObj.data || [], layout, {responsive: true, displayModeBar: false});
+            } catch(e) {
+                console.error("Error parsing or rendering chart data", e);
+            }
+        }
+        
+        scrollToBottom();
+    }
+
+    // Handle Form Submit
+    async function sendMessage(event) {
+        event.preventDefault();
+        
+        const message = chatInput.value.trim();
+        if (!message) return;
+        
+        // UI Updates
+        chatInput.value = '';
+        chatInput.disabled = true;
+        sendBtn.disabled = true;
+        
+        appendUserMessage(message);
+        appendTypingIndicator();
+        
+        try {
+            const response = await fetch('/api/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                 appendBotMessage(data.content, data.chart_data);
+            } else {
+                 appendBotMessage(`**오류가 발생했습니다.**\n\n${data.error || data.content || '알 수 없는 서버 오류'}`);
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+            appendBotMessage(`**네트워크 오류가 발생했습니다.**\n\n서버에 연결할 수 없습니다. \n\n${error.message}`);
+        } finally {
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    // Clear Chat Button Logic
+    document.getElementById('clear-chat-btn').addEventListener('click', function() {
+        if(confirm("대화 내역을 모두 지우시겠습니까?")) {
+            // Keep the welcome message, clear the rest
+             const welcomeMessageHTML = `
+                <div class="chat-message bot">
+                    <div class="bot-avatar"><i class="bi bi-stars"></i></div>
+                    <div class="message-bubble">
+                        <div class="markdown-body">
+                            <p class="fs-5 fw-bold text-white mb-2">안녕하세요! 투자 여정을 함께할 AI 어시스턴트입니다.</p>
+                            <p class="text-secondary">미국 상장사에 대한 실시간 데이터 분석, 재무 상태 등 무엇이든 물어보세요.</p>
+                            <div class="mt-4 p-3 rounded bg-main border border-secondary opacity-75">
+                                <p class="small text-muted mb-2 fw-bold text-uppercase tracking-wide">💡 추천 질문</p>
+                                <ul class="list-unstyled mb-0 text-light small">
+                                    <li class="mb-2"><i class="bi bi-arrow-right-short text-primary-accent me-1"></i> "애플(AAPL)의 최근 실적을 요약해줘"</li>
+                                    <li class="mb-2"><i class="bi bi-arrow-right-short text-primary-accent me-1"></i> "엔비디아와 AMD의 분기 매출을 비교해볼래?"</li>
+                                    <li><i class="bi bi-arrow-right-short text-primary-accent me-1"></i> "최근 가장 핫한 AI 관련 주식은 무엇인가요?"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatBox.innerHTML = welcomeMessageHTML;
+            chartCounter = 0;
+            
+            // Optionally could also send a clear session request to API, 
+            // but simply starting fresh text here works if session persistence isn't 100% required client-side only.
+        }
+    });
+
+    // Handle Enter key for specific situations (Shift+Enter for newline, Enter for submit)
+    // currently text_input is used so single line only, if textarea is needed later:
+    /*
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+    */
+</script>
+{% endblock %}

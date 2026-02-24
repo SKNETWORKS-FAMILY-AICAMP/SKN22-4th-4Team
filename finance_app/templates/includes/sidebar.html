@@ -1,0 +1,242 @@
+<!-- Includes: Sidebar -->
+<nav class="sidebar" id="sidebarNav">
+  <div class="sidebar-header">
+    <i
+      class="bi bi-bank2 text-primary-accent border border-primary-accent p-2 rounded"
+    ></i>
+    <span class="ms-2 sidebar-label">AI Finance</span>
+    <button
+      class="btn btn-sm ms-auto sidebar-toggle-btn"
+      id="sidebarToggle"
+      title="사이드바 접기"
+    >
+      <i class="bi bi-chevron-left" id="sidebarToggleIcon"></i>
+    </button>
+  </div>
+
+  <ul class="nav flex-column mb-2 mt-4 px-2">
+    <li class="nav-item">
+      <a
+        class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+        href="{% url 'finance_app:home' %}"
+      >
+        <i class="bi bi-grid-1x2-fill me-3"></i>
+        <span class="sidebar-label">대시보드</span>
+      </a>
+    </li>
+    <li class="nav-item mt-2">
+      <a
+        class="nav-link {% if request.resolver_match.url_name == 'chat' %}active{% endif %}"
+        href="{% url 'finance_app:chat' %}"
+      >
+        <i class="bi bi-robot me-3"></i>
+        <span class="sidebar-label">투자 인사이트</span>
+      </a>
+    </li>
+    <li class="nav-item mt-2">
+      <a
+        class="nav-link {% if request.resolver_match.url_name == 'calendar' %}active{% endif %}"
+        href="{% url 'finance_app:calendar' %}"
+      >
+        <i class="bi bi-calendar-event-fill me-3"></i>
+        <span class="sidebar-label">실적 캘린더</span>
+      </a>
+    </li>
+    <li class="nav-item mt-2">
+      <a
+        class="nav-link {% if request.resolver_match.url_name == 'report' %}active{% endif %}"
+        href="{% url 'finance_app:report' %}"
+      >
+        <i class="bi bi-file-earmark-bar-graph-fill me-3"></i>
+        <span class="sidebar-label">레포트 AI</span>
+      </a>
+    </li>
+  </ul>
+
+  <!-- ⭐ Watchlist Section (로그인 사용자 전용) -->
+  {% if user.is_authenticated %}
+  <div
+    class="px-3 py-2 border-top"
+    style="border-color: var(--border-color) !important"
+    id="watchlistSection"
+  >
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <small class="fw-bold text-secondary sidebar-label"
+        ><i class="bi bi-star-fill text-warning me-1"></i>관심 기업</small
+      >
+      <span
+        class="badge bg-primary bg-opacity-10 text-primary-accent sidebar-label"
+        id="watchlistCount"
+        >0</span
+      >
+    </div>
+    <!-- Add Ticker Input -->
+    <div class="input-group input-group-sm mb-2 sidebar-label">
+      <input
+        type="text"
+        class="form-control"
+        id="watchlistTickerInput"
+        placeholder="티커 입력 (예: AAPL)"
+        style="
+          background: var(--bg-main);
+          color: var(--text-primary);
+          border-color: var(--border-color);
+          font-size: 0.8rem;
+        "
+      />
+      <button
+        class="btn btn-sm btn-outline-primary"
+        type="button"
+        id="watchlistAddBtn"
+        title="추가"
+      >
+        <i class="bi bi-plus-lg"></i>
+      </button>
+    </div>
+    <!-- Ticker List -->
+    <div
+      id="watchlistItems"
+      style="max-height: 150px; overflow-y: auto; font-size: 0.8rem"
+    ></div>
+  </div>
+  {% endif %}
+
+  <!-- Scheduler Status Area -->
+  <div
+    class="mt-auto px-3 py-2 border-top"
+    style="border-color: var(--border-color) !important"
+  >
+    <div class="d-flex align-items-center mb-1">
+      <i class="bi bi-clock-history me-2 text-secondary"></i>
+      <small class="fw-bold text-secondary sidebar-label"
+        >S&P500 수집 엔진</small
+      >
+    </div>
+    {% if scheduler_running %}
+    <div class="d-flex align-items-center">
+      <span
+        class="badge bg-success bg-opacity-10 text-success me-2 border border-success border-opacity-25 mt-1"
+        style="border-radius: 4px"
+        >가동중</span
+      >
+      <small
+        class="text-secondary sidebar-label"
+        style="font-size: 0.7rem; line-height: 1.1"
+        >다음 실행: {{ scheduler_next_run|default:"매일 05:00 KST" }}</small
+      >
+    </div>
+    {% else %}
+    <div class="d-flex align-items-center mt-1">
+      <span
+        class="badge bg-warning bg-opacity-10 text-warning me-2 border border-warning border-opacity-25"
+        style="border-radius: 4px"
+        >대기중</span
+      >
+      <small
+        class="text-secondary sidebar-label"
+        style="font-size: 0.7rem; line-height: 1.1"
+        >매일 05:00 KST 실행</small
+      >
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <div
+    class="sidebar-footer p-3 border-top"
+    style="border-color: var(--border-color) !important"
+  >
+    <small class="text-secondary sidebar-label"
+      >Powered by Gemini & Neo4j</small
+    >
+  </div>
+</nav>
+
+<!-- Watchlist JS -->
+{% if user.is_authenticated %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const itemsDiv = document.getElementById("watchlistItems");
+    const countBadge = document.getElementById("watchlistCount");
+    const addBtn = document.getElementById("watchlistAddBtn");
+    const tickerInput = document.getElementById("watchlistTickerInput");
+
+    function getCookie(name) {
+      let v = null;
+      document.cookie.split(";").forEach((c) => {
+        c = c.trim();
+        if (c.startsWith(name + "="))
+          v = decodeURIComponent(c.substring(name.length + 1));
+      });
+      return v;
+    }
+
+    function loadWatchlist() {
+      fetch('{% url "finance_app:watchlist_list" %}')
+        .then((r) => r.json())
+        .then((data) => {
+          const tickers = data.tickers || [];
+          countBadge.textContent = tickers.length;
+          itemsDiv.innerHTML = "";
+          tickers.forEach((t) => {
+            const row = document.createElement("div");
+            row.className =
+              "d-flex align-items-center justify-content-between py-1";
+            row.innerHTML = `
+                        <span class="text-primary-accent fw-semibold">${t}</span>
+                        <button class="btn btn-sm p-0 text-negative border-0 bg-transparent" onclick="removeWatchlist('${t}')" title="삭제">
+                            <i class="bi bi-x-circle"></i>
+                        </button>`;
+            itemsDiv.appendChild(row);
+          });
+        })
+        .catch(() => {
+          itemsDiv.innerHTML =
+            '<small class="text-secondary">로드 실패</small>';
+        });
+    }
+
+    window.removeWatchlist = function (ticker) {
+      fetch('{% url "finance_app:watchlist_remove" %}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ ticker }),
+      })
+        .then((r) => r.json())
+        .then(() => loadWatchlist());
+    };
+
+    addBtn.addEventListener("click", () => {
+      const ticker = tickerInput.value.trim();
+      if (!ticker) return;
+      fetch('{% url "finance_app:watchlist_add" %}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ ticker }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          tickerInput.value = "";
+          if (data.resolved_from) {
+            tickerInput.placeholder = `${data.resolved_from} → ${data.ticker} ✓`;
+            setTimeout(() => {
+              tickerInput.placeholder = "티커 입력 (예: AAPL)";
+            }, 2500);
+          }
+          loadWatchlist();
+        });
+    });
+
+    tickerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addBtn.click();
+    });
+    loadWatchlist();
+  });
+</script>
+{% endif %}
