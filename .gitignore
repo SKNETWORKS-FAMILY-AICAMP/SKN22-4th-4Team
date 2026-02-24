@@ -1,0 +1,99 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+/data/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Data files
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/vector_store/*
+!data/vector_store/.gitkeep
+*.xlsx
+*.xls
+*.parquet
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Models
+# Models
+models/*
+!models/.gitkeep
+!models/*.py
+*.pkl
+*.h5
+*.pth
+*.ckpt
+
+# Logs
+logs/
+*.log
+
+# SEC EDGAR downloads
+sec-edgar-filings/
+edgar/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Streamlit
+.streamlit/
+
+# Fonts (users should download separately)
+fonts/*.ttf
+fonts/*.ttc
+fonts/*.otf
+fonts/*.pkl

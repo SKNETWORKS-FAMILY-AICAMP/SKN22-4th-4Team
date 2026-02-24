@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .ticker-tag {
+        display: inline-flex;
+        padding: 6px 14px;
+        background-color: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        margin: 5px;
+        font-weight: 600;
+        align-items: center;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .ticker-tag .remove-btn {
+        margin-left: 8px;
+        cursor: pointer;
+        color: var(--text-color);
+        opacity: 0.6;
+        transition: opacity 0.2s, color 0.2s;
+    }
+    .ticker-tag .remove-btn:hover {
+        opacity: 1;
+        color: #ff4444;
+    }
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background-color: var(--bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        max-height: 250px;
+        overflow-y: auto;
+        display: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .search-result-item {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.2s;
+    }
+    .search-result-item:hover {
+        background-color: var(--surface-color);
+    }
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+    #report-content-box {
+        background-color: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-top: 20px;
+        min-height: 300px;
+    }
+    /* Markdown Typography Enhancements */
+    #report-content-box h1, #report-content-box h2, #report-content-box h3 {
+        color: #fff;
+        font-weight: 700;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+    }
+    #report-content-box h1 { font-size: 2rem; }
+    #report-content-box h2 { font-size: 1.5rem; }
+    #report-content-box h3 { font-size: 1.25rem; border-bottom: none; }
+    
+    #report-content-box p {
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+    
+    #report-content-box blockquote {
+        border-left: 4px solid var(--primary-accent);
+        padding-left: 1rem;
+        color: #a0aec0;
+        background: rgba(255,255,255,0.05);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+    }
+
+    #report-content-box table {
+        width: 100%;
+        margin-bottom: 1.5rem;
+        border-collapse: collapse;
+    }
+
+    #report-content-box th, #report-content-box td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
+        text-align: left;
+    }
+
+    #report-content-box th {
+        background-color: rgba(255,255,255,0.05);
+        font-weight: 600;
+        color: var(--text-color);
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-5 align-items-center">
+    <div class="col-12">
+        <h2 class="main-header mb-2 text-success fw-bold"><i class="bi bi-file-earmark-bar-graph me-2"></i>레포트 생성</h2>
+        <p class="text-secondary fs-5 mb-0">AI 모델 기반 | 단일 기업 심층 분석 및 경쟁사 복수 비교 레포트</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="premium-card p-4">
+            <div class="d-flex align-items-center mb-4 text-info">
+                 <i class="bi bi-lightbulb fs-4 me-3"></i>
+                 <span class="fs-6"><strong>검색 팁:</strong> 회사명(한글/영어)이나 티커를 입력하면 자동완성 목록이 나타납니다. (예: '테' → '테슬라')</span>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-9 mb-3 position-relative">
+                    <label for="tickerSearch" class="form-label text-secondary fw-bold">분석할 회사 검색 및 추가</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-main border-secondary text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" id="tickerSearch" class="form-control form-control-lg bg-main text-white border-secondary border-start-0" placeholder="티커(TSLA)나 이름(테슬라) 검색 또는 직접입력 후 Enter...">
+                        <button class="btn btn-outline-secondary px-4 fw-bold" type="button" id="addTickerBtn">추가</button>
+                    </div>
+                    <div id="searchResults" class="search-results shadow border-secondary"></div>
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <button id="generateBtn" class="btn btn-premium w-100 py-2 fw-bold d-flex align-items-center justify-content-center h-100" style="min-height: 48px;">
+                        <i class="bi bi-pencil-square me-2"></i> 레포트 생성
+                    </button>
+                </div>
+            </div>
+
+            <div class="row mt-3 mb-2">
+                <div class="col-12">
+                     <h6 class="text-secondary fw-bold text-uppercase tracking-wide mb-3"><i class="bi bi-bar-chart-steps me-2"></i>차트 포함 옵션</h6>
+                     <div class="d-flex flex-wrap gap-4">
+                         <div class="form-check form-switch">
+                             <input class="form-check-input fs-5" type="checkbox" id="chartLine" checked>
+                             <label class="form-check-label text-light lh-lg ms-2" for="chartLine">주가 추이 (Line)</label>
+                         </div>
+                         <div class="form-check form-switch">
+                             <input class="form-check-input fs-5" type="checkbox" id="chartCandle">
+                             <label class="form-check-label text-light lh-lg ms-2" for="chartCandle">캔들 차트 (Candle)</label>
+                         </div>
+                         <div class="form-check form-switch">
+                             <input class="form-check-input fs-5" type="checkbox" id="chartVolume">
+                             <label class="form-check-label text-light lh-lg ms-2" for="chartVolume">거래량 (Volume)</label>
+                         </div>
+                         <div class="form-check form-switch">
+                             <input class="form-check-input fs-5" type="checkbox" id="chartFinance">
+                             <label class="form-check-label text-light lh-lg ms-2" for="chartFinance">재무 추이 (Financials)</label>
+                         </div>
+                     </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="text-secondary fw-bold text-uppercase tracking-wide mb-3">🎯 분석 대상 (선택됨)</h6>
+                    <div id="selectedTickersContainer" class="p-3 bg-main border border-secondary rounded-3" style="min-height: 70px;">
+                        <span class="text-muted small" id="emptyTickersMsg">비어 있음. 위에서 검색하여 기업을 추가하세요.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loader -->
+<div class="row">
+    <div class="col-12 text-center my-5" id="reportLoader" style="display: none;">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="mt-3 text-light" id="loaderText">레포트를 생성 중입니다. 잠시만 기다려주세요...</h5>
+    </div>
+</div>
+
+<!-- Results Area -->
+<div class="row" id="resultsArea" style="display: none;">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
+            <h3 class="text-white mb-0 fw-bold"><i class="bi bi-file-text me-2 text-success opacity-75"></i>생성된 레포트</h3>
+            <form id="downloadPdfForm" action="{% url 'finance_app:download_report_pdf' %}" method="POST">
+                <!-- CSRF Token not needed since decorator @csrf_exempt used, but good practice if not -->
+                <input type="hidden" name="report_md" id="hiddenReportMd" value="">
+                <input type="hidden" name="file_prefix" id="hiddenFilePrefix" value="">
+                <button type="submit" class="btn btn-outline-success border-2 fw-bold rounded-pill px-4">
+                    <i class="bi bi-download me-2"></i> PDF 다운로드
+                </button>
+            </form>
+        </div>
+        <div id="report-content-box" class="text-light shadow-lg"></div>
+        <div id="charts-container" class="mt-5"></div>
+    </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script>
+    const tickerSearch = document.getElementById('tickerSearch');
+    const searchResults = document.getElementById('searchResults');
+    const addTickerBtn = document.getElementById('addTickerBtn');
+    const selectedTickersContainer = document.getElementById('selectedTickersContainer');
+    const emptyTickersMsg = document.getElementById('emptyTickersMsg');
+    const generateBtn = document.getElementById('generateBtn');
+    const reportLoader = document.getElementById('reportLoader');
+    const resultsArea = document.getElementById('resultsArea');
+    const reportContentBox = document.getElementById('report-content-box');
+    const chartsContainer = document.getElementById('charts-container');
+    const hiddenReportMd = document.getElementById('hiddenReportMd');
+    const hiddenFilePrefix = document.getElementById('hiddenFilePrefix');
+
+    let selectedTickers = new Set();
+    let searchTimeout = null;
+
+    // Search input handler
+    tickerSearch.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        clearTimeout(searchTimeout);
+        
+        if (query.length === 0) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/report/search_tickers/?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    searchResults.innerHTML = '';
+                    if (data.results && data.results.length > 0) {
+                        data.results.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'search-result-item text-light';
+                            // bold rendering for markdown in label
+                            div.innerHTML = marked.parseInline(item.label);
+                            div.onclick = () => {
+                                addTicker(item.value);
+                                searchResults.style.display = 'none';
+                                tickerSearch.value = '';
+                            };
+                            searchResults.appendChild(div);
+                        });
+                        searchResults.style.display = 'block';
+                    } else {
+                        searchResults.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Search error:', err);
+                    searchResults.style.display = 'none';
+                });
+        }, 300);
+    });
+
+    // Close search results on outside click
+    document.addEventListener('click', function(e) {
+        if (!tickerSearch.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Manual add handling
+    function handleManualAdd() {
+        const val = tickerSearch.value.trim();
+        if (val) {
+            addTicker(val);
+            tickerSearch.value = '';
+            searchResults.style.display = 'none';
+        }
+    }
+
+    addTickerBtn.addEventListener('click', handleManualAdd);
+    tickerSearch.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') handleManualAdd();
+    });
+
+    function addTicker(tickerValue) {
+        const uppercaseVal = tickerValue.toUpperCase();
+        if (selectedTickers.has(uppercaseVal)) return;
+
+        selectedTickers.add(uppercaseVal);
+        updateTickerUI();
+    }
+
+    function removeTicker(tickerValue) {
+        selectedTickers.delete(tickerValue);
+        updateTickerUI();
+    }
+
+    function updateTickerUI() {
+        if (selectedTickers.size === 0) {
+            emptyTickersMsg.style.display = 'inline';
+            // keep the container clean
+            Array.from(selectedTickersContainer.children).forEach(child => {
+                if (child !== emptyTickersMsg) child.remove();
+            });
+            return;
+        }
+
+        emptyTickersMsg.style.display = 'none';
+        
+        // Remove existing tags
+        Array.from(selectedTickersContainer.children).forEach(child => {
+            if (child !== emptyTickersMsg) child.remove();
+        });
+
+        // Re-render tags
+        selectedTickers.forEach(ticker => {
+            const span = document.createElement('span');
+            span.className = 'ticker-tag text-light shadow-sm';
+            span.innerHTML = `${ticker} <i class="bi bi-x-circle-fill remove-btn" onclick="removeTicker('${ticker}')"></i>`;
+            selectedTickersContainer.appendChild(span);
+        });
+    }
+
+    // Generate Report
+    generateBtn.addEventListener('click', function() {
+        if (selectedTickers.size === 0) {
+            alert('분석할 대상(티커)을 하나 이상 선택해주세요.');
+            return;
+        }
+
+        const tickersList = Array.from(selectedTickers);
+        
+        // Fetch chart preferences
+        const chartOptions = {
+            line: document.getElementById('chartLine').checked,
+            candle: document.getElementById('chartCandle').checked,
+            volume: document.getElementById('chartVolume').checked,
+            finance: document.getElementById('chartFinance').checked
+        };
+        
+        // UI updates
+        generateBtn.disabled = true;
+        tickerSearch.disabled = true;
+        addTickerBtn.disabled = true;
+        reportLoader.style.display = 'block';
+        resultsArea.style.display = 'none';
+        reportContentBox.innerHTML = '';
+        chartsContainer.innerHTML = '';
+
+        fetch('/api/report/generate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // Add CSRF token header if needed
+            },
+            body: JSON.stringify({ 
+                tickers: tickersList, 
+                charts: chartOptions 
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            generateBtn.disabled = false;
+            tickerSearch.disabled = false;
+            addTickerBtn.disabled = false;
+            reportLoader.style.display = 'none';
+
+            if (data.error) {
+                alert(`오류 발생: ${data.error}`);
+                return;
+            }
+
+            if (data.success) {
+                resultsArea.style.display = 'block';
+                
+                // Render markdown
+                reportContentBox.innerHTML = marked.parse(data.report_md);
+                
+                // Update hidden inputs for PDF download
+                hiddenReportMd.value = data.report_md;
+                hiddenFilePrefix.value = data.file_prefix;
+
+                // Render charts if any
+                if (data.charts && data.charts.length > 0) {
+                    data.charts.forEach((chartObj, idx) => {
+                        const tickerHeader = document.createElement('h4');
+                        tickerHeader.className = 'text-info mt-5 mb-3';
+                        tickerHeader.innerText = `${chartObj.ticker} 가격/재무 차트`;
+                        chartsContainer.appendChild(tickerHeader);
+
+                        // Line Chart
+                        if (chartObj.line_chart) {
+                            const lineDiv = document.createElement('div');
+                            lineDiv.id = `chart-line-${idx}`;
+                            lineDiv.className = 'mb-4 premium-card p-2';
+                            chartsContainer.appendChild(lineDiv);
+                            const parsedLine = JSON.parse(chartObj.line_chart);
+                            let layout = parsedLine.layout || {};
+                            layout.plot_bgcolor = 'transparent';
+                            layout.paper_bgcolor = 'transparent';
+                            layout.font = { color: 'var(--text-primary)' };
+                            Plotly.newPlot(lineDiv.id, parsedLine.data, layout, {responsive: true});
+                        }
+
+                        // Candle Chart
+                        if (chartObj.candle_chart) {
+                            const candleDiv = document.createElement('div');
+                            candleDiv.id = `chart-candle-${idx}`;
+                            candleDiv.className = 'mb-4 premium-card p-2';
+                            chartsContainer.appendChild(candleDiv);
+                            const parsedCandle = JSON.parse(chartObj.candle_chart);
+                            let layout = parsedCandle.layout || {};
+                            layout.plot_bgcolor = 'transparent';
+                            layout.paper_bgcolor = 'transparent';
+                            layout.font = { color: 'var(--text-primary)' };
+                            Plotly.newPlot(candleDiv.id, parsedCandle.data, layout, {responsive: true});
+                        }
+                        
+                        // Volume Chart
+                        if (chartObj.volume_chart) {
+                            const volDiv = document.createElement('div');
+                            volDiv.id = `chart-vol-${idx}`;
+                            volDiv.className = 'mb-4 premium-card p-2';
+                            chartsContainer.appendChild(volDiv);
+                            const parsedVol = JSON.parse(chartObj.volume_chart);
+                            let layout = parsedVol.layout || {};
+                            layout.plot_bgcolor = 'transparent';
+                            layout.paper_bgcolor = 'transparent';
+                            layout.font = { color: 'var(--text-primary)' };
+                            Plotly.newPlot(volDiv.id, parsedVol.data, layout, {responsive: true});
+                        }
+
+                        // Finance Chart
+                        if (chartObj.finance_chart) {
+                            const finDiv = document.createElement('div');
+                            finDiv.id = `chart-fin-${idx}`;
+                            finDiv.className = 'mb-4 premium-card p-2';
+                            chartsContainer.appendChild(finDiv);
+                            const parsedFin = JSON.parse(chartObj.finance_chart);
+                            let layout = parsedFin.layout || {};
+                            layout.plot_bgcolor = 'transparent';
+                            layout.paper_bgcolor = 'transparent';
+                            layout.font = { color: 'var(--text-primary)' };
+                            Plotly.newPlot(finDiv.id, parsedFin.data, layout, {responsive: true});
+                        }
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Generation error:', err);
+            generateBtn.disabled = false;
+            tickerSearch.disabled = false;
+            addTickerBtn.disabled = false;
+            reportLoader.style.display = 'none';
+            alert('레포트 생성 중 네트워크 오류가 발생했습니다.');
+        });
+    });
+</script>
+{% endblock %}

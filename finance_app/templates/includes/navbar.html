@@ -1,0 +1,45 @@
+<!-- Includes: Navbar (Top) -->
+<header class="p-3 bg-surface border-bottom sticky-top" style="border-color: var(--border-color) !important;">
+    <div class="d-flex justify-content-end align-items-center w-100">
+        <!-- Auth & Settings Area in Navbar instead of Sidebar bottom -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="position-relative">
+                <i class="bi bi-bell text-secondary fs-5" style="cursor: pointer;"></i>
+                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                    <span class="visually-hidden">New alerts</span>
+                </span>
+            </div>
+            <div class="dropdown me-2">
+                <a href="#" class="d-flex align-items-center text-primary text-decoration-none dropdown-toggle border rounded-pill px-3 py-1 bg-main" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: var(--border-color) !important;">
+                    <i class="bi bi-moon-stars-fill fs-5 text-warning" id="themeIcon"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="themeDropdown">
+                    <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="setTheme('light'); return false;"><i class="bi bi-sun-fill me-2 text-warning"></i> Light Mode</a></li>
+                    <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="setTheme('dark'); return false;"><i class="bi bi-moon-stars-fill me-2 text-primary-accent"></i> Dark Mode</a></li>
+                </ul>
+            </div>
+            
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-primary text-decoration-none dropdown-toggle border rounded-pill px-2 py-1 bg-main" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: var(--border-color) !important;">
+                    <i class="bi bi-person-circle fs-5 me-2 text-primary-accent"></i>
+                    <strong>{% if user.is_authenticated %}{{ user.email|default:user.username }}{% else %}Guest{% endif %}</strong>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow list-unstyled" aria-labelledby="dropdownUser1">
+                    {% if user.is_authenticated %}
+                        <li><a class="dropdown-item" href="#">프로필 설정</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger border-0 bg-transparent" style="width: 100%; text-align: left;">로그아웃</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li><a class="dropdown-item" href="{% url 'login' %}">로그인</a></li>
+                        <li><a class="dropdown-item" href="{% url 'finance_app:signup' %}">회원가입</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</header>
