@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import report_views
 
 app_name = "finance_app"
 
@@ -12,14 +13,22 @@ urlpatterns = [
     path(
         "api/calendar/", views.calendar_api, name="calendar_api"
     ),  # Calendar details API
-    path("report/", views.report, name="report"),
+    path("report/", report_views.report_view, name="report"),
     path(
         "api/report/search_tickers/",
-        views.search_tickers_api,
+        report_views.search_tickers_api,
         name="search_tickers_api",
     ),
-    path("api/report/generate/", views.generate_report_api, name="generate_report_api"),
-    path("report/download/pdf/", views.download_report_pdf, name="download_report_pdf"),
+    path(
+        "api/report/generate/",
+        report_views.generate_report_api,
+        name="generate_report_api",
+    ),
+    path(
+        "report/download/pdf/",
+        report_views.download_report_pdf,
+        name="download_report_pdf",
+    ),
     # Watchlist API
     path("api/watchlist/add/", views.watchlist_add, name="watchlist_add"),
     path("api/watchlist/remove/", views.watchlist_remove, name="watchlist_remove"),

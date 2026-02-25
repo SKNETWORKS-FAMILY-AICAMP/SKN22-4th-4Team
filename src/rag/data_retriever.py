@@ -42,7 +42,7 @@ class DataRetriever:
             # 1. 기본 기업 정보 및 관계 (GraphRAG 또는 DB)
             info_future = executor.submit(self._fetch_company_info, ticker)
             rel_future = executor.submit(self._fetch_relationships, ticker)
-            sentiment_future = executor.submit(self._fetch_news_sentiment, ticker)
+            # sentiment_future는 rel_future 결과에 의존하므로 잠시 보류
 
             # 2. RAG 컨텍스트 (VectorStore - Hybrid Search + Client-side Filtering)
             rag_future = None
@@ -82,10 +82,22 @@ class DataRetriever:
                 )
                 peers_future = executor.submit(self.finnhub.get_company_peers, ticker)
 
-            # 결과 수집
+            # 결과 수집 (1단계: 관계 데이터 확보)
             results["company"] = info_future.result()
-            results["relationships"] = rel_future.result()
-            results["news_sentiment"] = sentiment_future.result()
+            relationships = rel_future.result() or []
+            results["relationships"] = relationships
+
+            # 관계 데이터 기반으로 연관 기업 티커 추출 (최대 3개)
+            related_tickers = set()
+            for r in relationships[:5]:
+                t = r.get("target_ticker") or r.get("source_ticker")
+                if t and t != ticker:
+                    related_tickers.add(t)
+
+            # 2단계: 연관 기업 포함하여 감성 데이터 수집
+            results["news_sentiment"] = self._fetch_news_sentiment(
+                ticker, list(related_tickers)
+            )
 
             if rag_future:
                 try:
@@ -169,20 +181,28 @@ class DataRetriever:
         except Exception:
             return []
 
-    def _fetch_news_sentiment(self, ticker: str) -> List[Dict]:
-        """최신 뉴스 감성 분석 데이터 수집"""
+    def _fetch_news_sentiment(
+        self, ticker: str, related_tickers: List[str] = None
+    ) -> List[Dict]:
+        """최신 뉴스 감성 분석 데이터 수집 (관계 기업 포함)"""
         try:
+            tickers_to_query = [ticker]
+            if related_tickers:
+                tickers_to_query.extend(related_tickers)
+
             res = (
                 self.supabase.table("news_sentiment")
-                .select("headline, sentiment_label, sentiment_score, published_at")
-                .eq("ticker", ticker)
+                .select(
+                    "ticker, headline, sentiment_label, sentiment_score, published_at"
+                )
+                .in_("ticker", tickers_to_query)
                 .order("published_at", desc=True)
-                .limit(5)
+                .limit(10)
                 .execute()
             )
             return res.data or []
         except Exception as e:
-            logger.warning(f"News sentiment fetch failed for {ticker}: {e}")
+            logger.warning(f"News sentiment fetch failed for {tickers_to_query}: {e}")
             return []
 
     def _fetch_financial_data_parallel(self, company_id: str) -> Dict:

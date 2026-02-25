@@ -9,9 +9,21 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timedelta
 
-# OpenAI는 임베딩 전용으로만 사용 (LLM은 llm_client를 통해)
 import json
 import re
+
+try:
+    from langsmith import traceable
+except ImportError:
+
+    def traceable(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        if args and callable(args[0]):
+            return args[0]
+        return decorator
+
 
 try:
     from rag.rag_base import RAGBase, EXCHANGE_AVAILABLE
@@ -157,6 +169,7 @@ class AnalystChatbot(RAGBase):
             logger.warning(f"Query translation failed: {e}")
             return user_query  # Fallback to original
 
+    @traceable(run_type="chain", name="build_context")
     def _build_context(self, query: str, ticker: Optional[str] = None) -> str:
         """Build context from RAG search, company data, and real-time Finnhub data (Optimized with Parallel Fetch)"""
 
@@ -244,13 +257,35 @@ class AnalystChatbot(RAGBase):
 
         # 5. News Sentiment (FinBERT)
         sentiments = all_data.get("news_sentiment", [])
+        logger.info(
+            f"[Context] FinBERT sentiment entries for {ticker}: {len(sentiments)}건"
+        )
         if sentiments:
-            context_parts.append("\n## 🤖 AI 분석 최신 뉴스 심리 (FinBERT)")
+            context_parts.append(
+                f"\n## 🤖 AI 분석 최신 뉴스 심리 (FinBERT) - {len(sentiments)}건"
+            )
+            pos_count = sum(
+                1
+                for s in sentiments
+                if str(s.get("sentiment_label", "")).lower() == "positive"
+            )
+            neg_count = sum(
+                1
+                for s in sentiments
+                if str(s.get("sentiment_label", "")).lower() == "negative"
+            )
+            neu_count = len(sentiments) - pos_count - neg_count
+            context_parts.append(
+                f"📊 전체 감성 요약: 긍정 {pos_count}건 / 부정 {neg_count}건 / 중립 {neu_count}건"
+            )
             for s in sentiments:
+                news_ticker = s.get("ticker", "UNKNOWN")
                 label = str(s.get("sentiment_label", "neutral")).upper()
                 score = s.get("sentiment_score", 0)
                 headline = s.get("headline", "")[:80]
-                context_parts.append(f"- [{label} | 확신도: {score:.2f}] {headline}")
+                context_parts.append(
+                    f"- [{news_ticker}] [{label} | 확신도: {score:.2f}] {headline}"
+                )
 
         return "\n".join(context_parts) if context_parts else "추가 컨텍스트 없음"
 
@@ -408,6 +443,7 @@ class AnalystChatbot(RAGBase):
 
     # _get_financial_data, _handle_tool_call_unified → chat_tools.ToolExecutor로 이동됨
 
+    @traceable(run_type="chain", name="analyst_chat")
     def chat(
         self, message: str, ticker: Optional[str] = None, use_rag: bool = True
     ) -> Dict[str, Any]:
@@ -533,15 +569,13 @@ class AnalystChatbot(RAGBase):
             else:
                 raw_content = llm_result.get("content") or ""
 
-            # JSON 파싱 및 최종 메시지 추출
+            # JSON 파싱 및 최종 메시지 추출 (강화 버전)
             try:
-                parsed_content = json.loads(raw_content)
-                assistant_message = parsed_content.get("answer", raw_content)
-                recommendations = parsed_content.get("recommendations", [])
-            except json.JSONDecodeError:
-                # Fallback if JSON fails (should be rare with response_format)
-                assistant_message = raw_content
-                recommendations = []
+                from utils.llm_parser import parse_llm_json_response
+            except ImportError:
+                from src.utils.llm_parser import parse_llm_json_response
+
+            assistant_message, recommendations = parse_llm_json_response(raw_content)
 
             # 5. 레포트 생성 의도 파악 및 처리
             report_data, report_type = self._process_report_request(
