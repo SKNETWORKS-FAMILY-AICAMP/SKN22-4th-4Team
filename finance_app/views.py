@@ -64,10 +64,21 @@ def format_number(value, unit=""):
         return f"${value:,.0f}{unit}"
 
 
-def home(request):
-    """홈 대시보드 뷰"""
+from django.core.cache import cache
 
-    # 환율 정보 (기본값)
+
+def home(request):
+    """홈 대시보드 뷰 (캐싱 적용)"""
+
+    # 1. 캐시 시도 (10분 유효)
+    cache_key = "home_dashboard_context"
+    cached_context = cache.get(cache_key)
+
+    if cached_context:
+        # 캐시 히트: 로깅 후 바로 반환
+        return render(request, "finance_app/home.html", cached_context)
+
+    # 2. 캐시 미스: 무거운 데이터 가져오기 수행
     exchange_rates = {}
     update_time = ""
     try:
@@ -140,6 +151,7 @@ def home(request):
         except Exception:
             pass
 
+    # 컨텍스트 조립
     context = {
         "exchange_rates": exchange_rates,
         "update_time": update_time,
@@ -156,6 +168,9 @@ def home(request):
         ),
         "db_companies_sample": db_companies_sample,
     }
+
+    # 3. 데이터 캐싱 (600초 = 10분)
+    cache.set(cache_key, context, 600)
 
     return render(request, "finance_app/home.html", context)
 
@@ -224,7 +239,12 @@ def chat_api(request):
 
         # 커넥터 가져오기 및 메시지 처리
         connector = get_chat_connector(strict_mode=False)
-        chat_request = ChatRequest(session_id=session_id, message=message, use_rag=True)
+        chat_request = ChatRequest(
+            session_id=session_id,
+            message=message,
+            ticker=None,
+            use_rag=True,
+        )
 
         response = connector.process_message(chat_request)
 

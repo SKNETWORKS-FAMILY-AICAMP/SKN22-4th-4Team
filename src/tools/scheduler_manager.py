@@ -58,6 +58,15 @@ def init_scheduler():
             replace_existing=True,
         )
 
+        # 매일 새벽 6시(KST) 실행 - 뉴스 심리 분석
+        scheduler.add_job(
+            run_analyze_news_job,
+            CronTrigger(hour=6, minute=0, timezone=kst),
+            id="analyze_news_daily",
+            name="Daily FinBERT News Sentiment Analysis",
+            replace_existing=True,
+        )
+
         scheduler.start()
         _scheduler = scheduler
         _collect_fn = collect_sp500_data
@@ -135,3 +144,15 @@ def render_sidebar_status():
         else:
             st.warning("⚠️ 스케줄러 비활성")
             st.caption("APScheduler 패키지가 필요합니다.")
+
+
+def run_analyze_news_job():
+    """FinBERT 기반 뉴스 감성 분석 백그라운드 작업"""
+    try:
+        from django.core.management import call_command
+
+        logger.info("🚀 일일 뉴스 감성 분석 작업을 시작합니다...")
+        call_command("analyze_news")
+        logger.info("✅ 뉴스 감성 분석 작업 완료.")
+    except Exception as e:
+        logger.error(f"❌ 뉴스 감성 분석 작업 실패: {e}")

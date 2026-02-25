@@ -242,6 +242,16 @@ class AnalystChatbot(RAGBase):
             context_parts.append("\n## 10-K 보고서 분석 내용")
             context_parts.append(rag_text)
 
+        # 5. News Sentiment (FinBERT)
+        sentiments = all_data.get("news_sentiment", [])
+        if sentiments:
+            context_parts.append("\n## 🤖 AI 분석 최신 뉴스 심리 (FinBERT)")
+            for s in sentiments:
+                label = str(s.get("sentiment_label", "neutral")).upper()
+                score = s.get("sentiment_score", 0)
+                headline = s.get("headline", "")[:80]
+                context_parts.append(f"- [{label} | 확신도: {score:.2f}] {headline}")
+
         return "\n".join(context_parts) if context_parts else "추가 컨텍스트 없음"
 
     def _extract_tickers(self, query: str) -> List[str]:
@@ -280,6 +290,11 @@ class AnalystChatbot(RAGBase):
         """Resolve Korean name or company name to Ticker"""
         if not input_text:
             return None
+
+        # 긴 문장이 들어온 경우 (예: "애플 실적 어때?") DB 검색 건너뛰고 바로 LLM 추출로 넘김
+        if len(input_text) > 20:
+            extracted = self._extract_tickers(input_text)
+            return extracted[0] if extracted else None
 
         # 1. Try Exact Ticker Match First (Prioritize "AAPL", "TSLA")
         # Even if input is "Apple", if we have a ticker "APPLE" (unlikely but possible), this checks.
@@ -327,19 +342,10 @@ class AnalystChatbot(RAGBase):
         if input_text.isascii() and len(input_text) <= 5 and " " not in input_text:
             return input_text.upper()
 
-        # 3. Fallback to LLM
+        # 5. Fallback to LLM for short unresolved strings
         try:
-            messages = [
-                {
-                    "role": "system",
-                    "content": "You are a financial assistant. Return ONLY the stock ticker symbol for the given company name. If unsure, return the input itself.",
-                },
-                {
-                    "role": "user",
-                    "content": f"What is the ticker for '{input_text}'?",
-                },
-            ]
-            return self._llm_chat(messages, max_tokens=10).strip()
+            extracted = self._extract_tickers(input_text)
+            return extracted[0] if extracted else input_text
         except Exception:
             return input_text
 
@@ -422,6 +428,10 @@ class AnalystChatbot(RAGBase):
             if ticker:
                 resolved = self._resolve_ticker_name(ticker)
                 tickers = [resolved] if resolved else [ticker]
+            else:
+                tickers = self._extract_tickers(message)
+                if tickers:
+                    logger.info(f"Auto-extracted tickers from message: {tickers}")
 
             messages = [{"role": "system", "content": self.system_prompt}]
             messages.extend(self.conversation_history[-6:])

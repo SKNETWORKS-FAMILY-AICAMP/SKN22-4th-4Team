@@ -326,6 +326,38 @@ def collect_sp500_data():
     #     send_slack_notification(...)
 
 
+def run_analyze_news_job():
+    """뉴스 감성 분석 파이프라인 (Django Command) 서브프로세스 실행"""
+    logger.info("=" * 60)
+    logger.info("🚀 일일 뉴스 감성 분석 작업을 시작합니다 (06:00 KST)")
+    logger.info("=" * 60)
+
+    try:
+        import subprocess
+
+        manage_py = project_root / "manage.py"
+        if manage_py.exists():
+            # subprocess.run을 통해 더 안전하게 실행 (출력도 캡처)
+            result = subprocess.run(
+                [sys.executable, str(manage_py), "analyze_news"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                logger.info("✅ 뉴스 감성 분석 작업 정상 완료")
+                # 결과 로그 출력
+                for line in result.stdout.splitlines():
+                    if "[DONE]" in line:
+                        logger.info(f"   {line}")
+            else:
+                logger.error(f"⚠️ 에러 발생 (exit code: {result.returncode})")
+                logger.error(f"   Error: {result.stderr}")
+        else:
+            logger.error(f"❌ manage.py 파일을 찾을 수 없습니다: {manage_py}")
+    except Exception as e:
+        logger.error(f"❌ 뉴스 감성 분석 작업 스크립트 실행 실패: {e}")
+
+
 def run_scheduler():
     """스케줄러 시작"""
     try:
@@ -345,6 +377,15 @@ def run_scheduler():
         CronTrigger(hour=5, minute=0, timezone=kst),
         id="sp500_daily_collection",
         name="S&P 500 Daily Data Collection",
+        replace_existing=True,
+    )
+
+    # 매일 새벽 6시(KST) 실행 - 뉴스 심리 분석
+    scheduler.add_job(
+        run_analyze_news_job,
+        CronTrigger(hour=6, minute=0, timezone=kst),
+        id="analyze_news_daily",
+        name="Daily FinBERT News Sentiment Analysis",
         replace_existing=True,
     )
 
