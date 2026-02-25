@@ -10,6 +10,19 @@ import logging
 from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 
+try:
+    from langsmith import traceable
+except ImportError:
+    # langsmith가 설치되지 않은 경우 no-op decorator
+    def traceable(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        if args and callable(args[0]):
+            return args[0]
+        return decorator
+
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -62,6 +75,7 @@ class LLMClient:
             raise ValueError("OPENAI_API_KEY 환경 변수가 필요합니다.")
         self.client = OpenAI(api_key=api_key)
 
+    @traceable(run_type="llm", name="chat_completion")
     def chat_completion(
         self,
         messages: List[Dict[str, str]],
@@ -165,6 +179,7 @@ class LLMClient:
         response = self.client.chat.completions.create(**kwargs)
         return response.choices[0].message.content or ""
 
+    @traceable(run_type="llm", name="chat_completion_with_tools")
     def chat_completion_with_tools(
         self,
         messages: List[Dict[str, str]],

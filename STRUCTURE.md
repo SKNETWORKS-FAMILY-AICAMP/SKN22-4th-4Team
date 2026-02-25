@@ -5,7 +5,8 @@ SKN22-4th-4Team/
 ├── config/                     # Django 프로젝트 전역 설정 (settings, urls, wsgi)
 ├── finance_app/                # 메인 Django 애플리케이션
 │   ├── models.py               # DB 모델 (Watchlist 등)
-│   ├── views.py                # Views (Home, Chat, Report, Calendar, Watchlist API)
+│   ├── views.py                # Views (Home, Chat, Calendar, Watchlist API)
+│   ├── report_views.py         # Views (Report 생성 및 다운로드 API 분리)
 │   ├── urls.py                 # URL 라우팅
 │   ├── templates/              # HTML 템플릿
 │   │   ├── base.html           # 레이아웃 뼈대 (Theme Switcher 적용)
@@ -27,9 +28,8 @@ SKN22-4th-4Team/
 │   │   └── vector_store.py     # 벡터 검색 (Supabase pgvector)
 │   ├── services/               # 핵심 비즈니스 로직 및 외부 연동 서비스
 │   │   └── news_analyzer.py    # Finnhub + FinBERT + GraphRAG 지능형 뉴스 분석
-│   ├── sql/                    # SQL 관련 모듈
-│   ├── tools/                  # 환율, 즐겨찾기, 검색 도구
-│   └── utils/                  # 유틸리티 (Plotly 차트, PDF, 티커 변환)
+│   ├── tools/                  # 환율, 즐겨찾기, 웹 검색 (Tavily) 통합 도구
+│   └── utils/                  # 공통 유틸리티 (Plotly 차트, PDF 컴파일, LLM 응답 파서)
 ├── scripts/                    # 유틸리티 및 배치 스크립트
 │   ├── build_company_relationships.py  # [ETL] 기업 관계 추출 및 구축
 │   ├── migrate_to_neo4j.py            # Supabase → Neo4j 관계 데이터 마이그레이션

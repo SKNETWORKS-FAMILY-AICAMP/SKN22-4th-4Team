@@ -182,7 +182,6 @@
         animation: typing 1.4s infinite ease-in-out both;
         opacity: 0.6;
     }
-
     .typing-indicator span:nth-child(1) {
         animation-delay: -0.32s;
     }
@@ -219,6 +218,35 @@
     /* Plotly 차트 모든 범례 및 축 텍스트 하얀색 강제 적용 */
     .js-plotly-plot .plotly text {
         fill: #ffffff !important;
+    }
+    
+    /* Recommendations Chips List */
+    .rec-chips-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .rec-chip {
+        display: inline-flex;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: var(--text-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .rec-chip:hover {
+        background-color: var(--accent-blue);
+        color: white;
+        border-color: var(--accent-blue);
     }
 </style>
 {% endblock %}
@@ -342,8 +370,14 @@
         }
     }
 
+    // Populate input field with recommended question
+    function fillInput(text) {
+        chatInput.value = text;
+        chatInput.focus();
+    }
+
     // Append Bot Message to Chat UI
-    function appendBotMessage(content, chartDataStr) {
+    function appendBotMessage(content, chartDataStr, recommendations) {
         removeTypingIndicator();
 
         const msgDiv = document.createElement('div');
@@ -388,6 +422,22 @@
                     </div>
                 `;
             });
+        }
+
+        if (recommendations && recommendations.length > 0) {
+            let chipsHtml = '';
+            recommendations.forEach(rec => {
+                const escapedRec = rec.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                chipsHtml += `<a href="#" class="rec-chip" onclick="fillInput('${escapedRec}'); return false;"><i class="bi bi-chat-left-dots me-2 text-primary-accent"></i> ${escapedRec}</a>`;
+            });
+            innerHtml += `
+                <div class="mt-3">
+                    <p class="small text-muted mb-2"><i class="bi bi-lightbulb text-warning"></i> 이런 질문은 어떠세요?</p>
+                    <div class="rec-chips-container">
+                        ${chipsHtml}
+                    </div>
+                </div>
+            `;
         }
 
         innerHtml += `</div></div>`; // Close markdown-body and message-bubble
@@ -437,13 +487,22 @@
                 },
                 body: JSON.stringify({ message: message })
             });
-
-            const data = await response.json();
-
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonErr) {
+                // 서버가 JSON이 아닌 응답을 보낸 경우 (HTML 에러 페이지 등)
+                appendBotMessage(`**서버 오류가 발생했습니다.**\n\n서버가 올바른 응답을 반환하지 않았습니다. (HTTP ${response.status})`);
+                return;
+            }
+            
             if (response.ok && data.success) {
-                appendBotMessage(data.content, data.chart_data);
+                const content = data.content || '(응답 내용이 비어 있습니다.)';
+                appendBotMessage(content, data.chart_data, data.recommendations);
             } else {
-                appendBotMessage(`**오류가 발생했습니다.**\n\n${data.error || data.content || '알 수 없는 서버 오류'}`);
+                // 에러 응답: content, error, 또는 error_code 중 하나라도 표시
+                const errorMsg = data.content || data.error || data.error_code || '알 수 없는 서버 오류';
+                appendBotMessage(`**오류가 발생했습니다.**\n\n${errorMsg}`);
             }
         } catch (error) {
             console.error('API Error:', error);

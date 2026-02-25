@@ -145,15 +145,15 @@ graph TD
 ```bash
 SKN22-4th-4Team/
 ├── config/                     # Django 프로젝트 전역 설정 (settings, urls, wsgi)
-├── finance_app/                # 메인 Django 애플리케이션 (views, templates, static/css)
+├── finance_app/                # 메인 Django 애플리케이션 (views, report_views, templates, static)
 ├── src/                        # 핵심 데이터 파이프라인 및 비즈니스 로직
 │   ├── core/                   # 코어 로직 (Validator, ChatConnector)
 │   ├── data/                   # API 클라이언트 (Finnhub, Supabase, SEC)
 │   ├── prompts/                # 시스템/챗봇 프롬프트 관리
-│   ├── rag/                    # RAG 엔진 (Chat, Report, GraphRAG, LLM Client)
-│   ├── sql/                    # SQL 변환 관련 모듈
-│   ├── tools/                  # 환율, 즐겨찾기, 스케줄러 도구
-│   └── utils/                  # 유틸리티 (Plotly 차트, PDF, 티커 변환)
+│   ├── rag/                    # RAG 엔진 (Chat, GraphRAG, Report, LLM Client)
+│   ├── services/               # 핵심 비즈니스 로직 및 외부 연동 서비스 (FinBERT 뉴스 분석)
+│   ├── tools/                  # 환율, 즐겨찾기, 웹 검색 (Tavily) 통합 도구
+│   └── utils/                  # 유틸리티 (Plotly 차트, PDF 생성, LLM 파서, 티커 변환)
 ├── scripts/                    # 유틸리티 및 배치 스크립트
 ├── docs/                       # 프로젝트 문서 및 이미지
 ├── manage.py                   # Django 관리 도구

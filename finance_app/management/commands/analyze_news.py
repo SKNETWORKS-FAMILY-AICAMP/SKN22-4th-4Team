@@ -1,11 +1,17 @@
 from django.core.management.base import BaseCommand
 from src.services.news_analyzer import NewsAnalyzerService
+import logging
 
 
 class Command(BaseCommand):
     help = "Finnhub에서 주요 기업의 뉴스를 수집하고 FinBERT를 이용해 감성 분석 후 Supabase에 저장합니다."
 
     def handle(self, *args, **options):
+        # logging 설정 추가 (콘솔에 출력되도록)
+        logging.basicConfig(
+            level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+        )
+
         # 1. 서비스 초기화 및 파이프라인 실행
         try:
             service = NewsAnalyzerService()

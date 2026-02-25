@@ -68,40 +68,46 @@ from django.core.cache import cache
 
 
 def home(request):
-    """홈 대시보드 뷰 (캐싱 적용)"""
+    """홈 대시보드 뷰 (캐싱 + 병렬 처리 최적화)"""
+    from concurrent.futures import ThreadPoolExecutor
 
     # 1. 캐시 시도 (10분 유효)
     cache_key = "home_dashboard_context"
     cached_context = cache.get(cache_key)
 
     if cached_context:
-        # 캐시 히트: 로깅 후 바로 반환
         return render(request, "finance_app/home.html", cached_context)
 
-    # 2. 캐시 미스: 무거운 데이터 가져오기 수행
-    exchange_rates = {}
-    update_time = ""
-    try:
-        if get_exchange_client:
-            client = get_exchange_client()
-            rates_summary = client.get_major_rates_summary()
-            if rates_summary:
-                exchange_rates = rates_summary.get("display_rates", {})
-                update_time = rates_summary.get("update_time", "")
-    except Exception as e:
-        print(f"Exchange Rate Error: {e}")
+    # 2. 캐시 미스: 병렬로 데이터 수집
+    results = {
+        "exchange_rates": {},
+        "update_time": "",
+        "company_count": 0,
+        "top_revenue_data": [],
+        "sector_counts": {},
+        "db_companies_sample": [],
+    }
 
-    # 데이터베이스 연동 정보 (매출 상위, 전체 기업 등)
-    company_count = 0
-    top_revenue_data = []  # JSON serialize 가능한 형태로 변환
-    sector_counts = {}
-
-    if SupabaseClient:
+    def fetch_exchange_rates():
         try:
-            # 전체 기업 (개수 파악 및 섹터 파악)
-            companies_df = SupabaseClient.get_all_companies()
-            company_count = len(companies_df)
+            if get_exchange_client:
+                client = get_exchange_client()
+                rates_summary = client.get_major_rates_summary()
+                if rates_summary:
+                    results["exchange_rates"] = rates_summary.get("display_rates", {})
+                    results["update_time"] = rates_summary.get("update_time", "")
+        except Exception as e:
+            logger.warning(f"Exchange Rate Error: {e}")
 
+    def fetch_company_data():
+        if not SupabaseClient:
+            return
+        try:
+            # 전체 기업 (1회만 조회 — 기존 2회 호출 제거)
+            companies_df = SupabaseClient.get_all_companies()
+            results["company_count"] = len(companies_df)
+
+            # 섹터별 분류
             if "sector" in companies_df.columns:
                 s_counts = companies_df["sector"].value_counts()
                 for s, count in s_counts.items():
@@ -111,13 +117,27 @@ def home(request):
                         and str(s).strip() != "11"
                         and str(s).lower() != "nan"
                     ):
-                        sector_counts[s] = int(count)
+                        results["sector_counts"][s] = int(count)
 
-            # 매출 상위
+            # DB 현황 샘플 (기존 데이터 재사용)
+            if not companies_df.empty and "ticker" in companies_df.columns:
+                sample = companies_df.head(15)
+                for _, r in sample.iterrows():
+                    results["db_companies_sample"].append(
+                        {
+                            "ticker": r.get("ticker", ""),
+                            "company_name": r.get("company_name", ""),
+                        }
+                    )
+        except Exception as e:
+            logger.warning(f"Supabase Companies Error: {e}")
+
+        # 매출 상위
+        try:
             top_df = SupabaseClient.get_top_companies_by_revenue(year=2025, limit=10)
             if not top_df.empty:
                 for _, row in top_df.iterrows():
-                    top_revenue_data.append(
+                    results["top_revenue_data"].append(
                         {
                             "ticker": row["ticker"],
                             "company_name": row["company_name"],
@@ -128,45 +148,35 @@ def home(request):
                                 row.get("revenue", 0) / 1e9
                                 if pd.notna(row.get("revenue"))
                                 else 0
-                            ),  # Plotly 바 차트용 데이터
+                            ),
                         }
                     )
         except Exception as e:
-            print(f"Supabase Data Error: {e}")
+            logger.warning(f"Supabase Revenue Error: {e}")
 
-    # DB 현황용 - 등록된 기업 일부 (최대 15개)
-    db_companies_sample = []
-    if SupabaseClient:
-        try:
-            all_df = SupabaseClient.get_all_companies()
-            if not all_df.empty and "ticker" in all_df.columns:
-                sample = all_df.head(15)
-                for _, r in sample.iterrows():
-                    db_companies_sample.append(
-                        {
-                            "ticker": r.get("ticker", ""),
-                            "company_name": r.get("company_name", ""),
-                        }
-                    )
-        except Exception:
-            pass
+    # 환율 + DB 쿼리 동시 실행
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        f1 = executor.submit(fetch_exchange_rates)
+        f2 = executor.submit(fetch_company_data)
+        f1.result()
+        f2.result()
 
     # 컨텍스트 조립
     context = {
-        "exchange_rates": exchange_rates,
-        "update_time": update_time,
-        "company_count": company_count,
-        "top_revenue_data": top_revenue_data,
+        "exchange_rates": results["exchange_rates"],
+        "update_time": results["update_time"],
+        "company_count": results["company_count"],
+        "top_revenue_data": results["top_revenue_data"],
         "top_revenue_json": json.dumps(
             [
                 {"ticker": d["ticker"], "revenue": d["raw_revenue"]}
-                for d in top_revenue_data
+                for d in results["top_revenue_data"]
             ]
         ),
         "sector_counts_json": json.dumps(
-            [{"label": k, "value": v} for k, v in sector_counts.items()]
+            [{"label": k, "value": v} for k, v in results["sector_counts"].items()]
         ),
-        "db_companies_sample": db_companies_sample,
+        "db_companies_sample": results["db_companies_sample"],
     }
 
     # 3. 데이터 캐싱 (600초 = 10분)
@@ -201,6 +211,7 @@ def search_companies_api(request):
     return JsonResponse({"results": results})
 
 
+@login_required
 def chat(request):
     """채팅 페이지 뷰"""
     # 챗 세션 ID 초기화
@@ -214,6 +225,7 @@ def chat(request):
 
 
 @csrf_exempt
+@login_required
 def chat_api(request):
     """채팅 메시지 처리 API"""
     if request.method != "POST":
@@ -273,12 +285,14 @@ def chat_api(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@login_required
 def calendar_view(request):
     """실적 캘린더 페이지 뷰"""
     return render(request, "finance_app/calendar.html")
 
 
 @csrf_exempt
+@login_required
 def calendar_api(request):
     """실적 캘린더 데이터 API"""
     if request.method != "POST":
@@ -369,146 +383,6 @@ def calendar_api(request):
     except Exception as e:
         print(f"Calendar API Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
-
-
-def report(request):
-    """레포트 생성 뷰"""
-    return render(request, "finance_app/report.html")
-
-
-@csrf_exempt
-def search_tickers_api(request):
-    """티커 자동완성 검색 API"""
-    query = request.GET.get("q", "")
-    if not query:
-        return JsonResponse({"results": []})
-
-    if not search_tickers:
-        return JsonResponse({"results": []})
-
-    try:
-        results = search_tickers(query)
-        # results is a list of tuples like [('AAPL - Apple Inc.', 'AAPL'), ...]
-        # We need to map it to JSON for select2 or custom dropdown
-        formatted_results = [{"label": item[0], "value": item[1]} for item in results]
-        return JsonResponse({"results": formatted_results[:10]})
-    except Exception as e:
-        print(f"Error searching tickers: {e}")
-        return JsonResponse({"results": []})
-
-
-@csrf_exempt
-def generate_report_api(request):
-    """레포트 생성 API"""
-    if request.method != "POST":
-        return JsonResponse({"error": "POST 메서드만 지원합니다."}, status=405)
-
-    if not ReportGenerator or not resolve_to_ticker:
-        return JsonResponse(
-            {"error": "레포트 생성 모듈을 로드할 수 없습니다."}, status=500
-        )
-
-    try:
-        body = json.loads(request.body)
-        tickers = body.get("tickers", [])
-        charts_req = body.get(
-            "charts", {"line": True, "candle": False, "volume": False, "finance": False}
-        )
-
-        if not tickers:
-            return JsonResponse(
-                {"error": "티커를 하나 이상 제공해야 합니다."}, status=400
-            )
-
-        generator = ReportGenerator()
-
-        # Resolve tickers to make sure we only have ticker symbols
-        resolved_tickers = []
-        for t in tickers:
-            resolved_t, _ = resolve_to_ticker(t.strip())
-            resolved_tickers.append(resolved_t)
-
-        report_md = ""
-        file_prefix = ""
-
-        try:
-            if len(resolved_tickers) > 1:
-                report_md = generator.generate_comparison_report(resolved_tickers)
-                file_prefix = f"comparison_{'_'.join(resolved_tickers)}"
-            else:
-                report_md = generator.generate_report(resolved_tickers[0])
-                file_prefix = f"{resolved_tickers[0]}_analysis_report"
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"LLM 레포트 생성 중 오류: {str(e)}"}, status=500
-            )
-
-        # 차트 생성 (Plotly JSON으로 직렬화)
-        charts_plotly_json = []
-        try:
-            for t in resolved_tickers:
-                chart_data = {"ticker": t}
-                if charts_req.get("line"):
-                    chart_data["line_chart"] = generate_line_chart_plotly(t).to_json()
-                if charts_req.get("candle"):
-                    chart_data["candle_chart"] = generate_candlestick_chart_plotly(
-                        t
-                    ).to_json()
-                if charts_req.get("volume"):
-                    try:
-                        chart_data["volume_chart"] = generate_volume_chart_plotly(
-                            t
-                        ).to_json()
-                    except Exception as ve:
-                        print(f"Volume chart error for {t}: {ve}")
-                if charts_req.get("finance"):
-                    try:
-                        chart_data["finance_chart"] = generate_financial_chart_plotly(
-                            t
-                        ).to_json()
-                    except Exception as fe:
-                        print(f"Finance chart error for {t}: {fe}")
-
-                charts_plotly_json.append(chart_data)
-        except Exception as e:
-            print(f"차트 생성 중 오류: {e}")
-
-        return JsonResponse(
-            {
-                "success": True,
-                "report_md": report_md,
-                "file_prefix": file_prefix,
-                "charts": charts_plotly_json,
-            }
-        )
-
-    except Exception as e:
-        print(f"Generate report error: {e}")
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-@csrf_exempt
-def download_report_pdf(request):
-    """PDF 다운로드 API"""
-    if request.method != "POST":
-        return HttpResponse("POST 메서드만 지원합니다.", status=405)
-
-    if not create_pdf:
-        return HttpResponse("PDF 생성 모듈을 로드할 수 없습니다.", status=500)
-
-    try:
-        report_md = request.POST.get("report_md", "")
-        file_prefix = request.POST.get("file_prefix", "report")
-
-        # 차트 이미지는 현재 생략하고 마크다운 텍스트만 PDF로 변환
-        pdf_bytes = create_pdf(report_md, chart_images=[])
-
-        response = HttpResponse(pdf_bytes, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{file_prefix}.pdf"'
-        return response
-    except Exception as e:
-        print(f"PDF 생성 오류: {e}")
-        return HttpResponse(f"PDF 생성 실패: {str(e)}", status=500)
 
 
 class SignUpView(generic.CreateView):

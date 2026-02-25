@@ -157,7 +157,29 @@ class NewsAnalyzerService:
             except Exception as e:
                 logger.error(f"[{ticker}] 뉴스 분석 중 에러 발생: {e}")
 
+        # 파이프라인 마지막에 오래된 데이터 (30일 초과) 삭제 진행
+        self._cleanup_old_data(days=30)
+
         logger.info(
             f"[DONE] 파이프라인 종료. 총 {total_inserted}건 데이터 분석/저장 완료."
         )
         return total_inserted
+
+    def _cleanup_old_data(self, days: int = 30):
+        """DB 용량 관리를 위해 지정된 기간(기본 30일)이 지난 옛날 뉴스 데이터를 삭제합니다."""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+            res = (
+                self.supabase.table("news_sentiment")
+                .delete()
+                .lt("published_at", cutoff_date)
+                .execute()
+            )
+
+            # supabase-py SDK 구조에 따라 res.data(삭제된 항목 리스트)가 있을 수도 있고, res.count가 있을 수도 있습니다.
+            deleted_count = len(res.data) if res.data else 0
+            logger.info(
+                f"[CLEANUP] {days}일이 지난 오래된 뉴스 데이터 정리(삭제) 완료. (삭제 시도됨)"
+            )
+        except Exception as e:
+            logger.error(f"[CLEANUP ERROR] 오래된 데이터 삭제 중 오류 발생: {e}")

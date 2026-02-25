@@ -109,33 +109,33 @@
     <div class="d-flex align-items-center mb-1">
       <i class="bi bi-clock-history me-2 text-secondary"></i>
       <small class="fw-bold text-secondary sidebar-label"
-        >S&P500 수집 엔진</small
+        >자동 수집 엔진</small
       >
     </div>
     {% if scheduler_running %}
     <div class="d-flex align-items-center">
       <span
         class="badge bg-success bg-opacity-10 text-success me-2 border border-success border-opacity-25 mt-1"
-        style="border-radius: 4px"
+        style="border-radius: 4px; flex-shrink: 0"
         >가동중</span
       >
       <small
         class="text-secondary sidebar-label"
-        style="font-size: 0.7rem; line-height: 1.1"
-        >다음 실행: {{ scheduler_next_run|default:"매일 05:00 KST" }}</small
+        style="font-size: 0.7rem; line-height: 1.3; white-space: nowrap"
+        >S&P500 05:00 · FinBERT 06:00 KST</small
       >
     </div>
     {% else %}
     <div class="d-flex align-items-center mt-1">
       <span
         class="badge bg-warning bg-opacity-10 text-warning me-2 border border-warning border-opacity-25"
-        style="border-radius: 4px"
+        style="border-radius: 4px; flex-shrink: 0"
         >대기중</span
       >
       <small
         class="text-secondary sidebar-label"
-        style="font-size: 0.7rem; line-height: 1.1"
-        >매일 05:00 KST 실행</small
+        style="font-size: 0.7rem; line-height: 1.3; white-space: nowrap"
+        >S&P500 05:00 · FinBERT 06:00 KST</small
       >
     </div>
     {% endif %}
