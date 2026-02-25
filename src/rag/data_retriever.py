@@ -42,6 +42,7 @@ class DataRetriever:
             # 1. 기본 기업 정보 및 관계 (GraphRAG 또는 DB)
             info_future = executor.submit(self._fetch_company_info, ticker)
             rel_future = executor.submit(self._fetch_relationships, ticker)
+            sentiment_future = executor.submit(self._fetch_news_sentiment, ticker)
 
             # 2. RAG 컨텍스트 (VectorStore - Hybrid Search + Client-side Filtering)
             rag_future = None
@@ -84,6 +85,7 @@ class DataRetriever:
             # 결과 수집
             results["company"] = info_future.result()
             results["relationships"] = rel_future.result()
+            results["news_sentiment"] = sentiment_future.result()
 
             if rag_future:
                 try:
@@ -165,6 +167,22 @@ class DataRetriever:
             )
             return (out.data or []) + (inc.data or [])
         except Exception:
+            return []
+
+    def _fetch_news_sentiment(self, ticker: str) -> List[Dict]:
+        """최신 뉴스 감성 분석 데이터 수집"""
+        try:
+            res = (
+                self.supabase.table("news_sentiment")
+                .select("headline, sentiment_label, sentiment_score, published_at")
+                .eq("ticker", ticker)
+                .order("published_at", desc=True)
+                .limit(5)
+                .execute()
+            )
+            return res.data or []
+        except Exception as e:
+            logger.warning(f"News sentiment fetch failed for {ticker}: {e}")
             return []
 
     def _fetch_financial_data_parallel(self, company_id: str) -> Dict:

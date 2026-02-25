@@ -44,6 +44,30 @@ def get_chat_tools():
         {
             "type": "function",
             "function": {
+                "name": "get_basic_financials",
+                "description": "Get basic financial metrics (P/E, P/B, ROE, ROA, Market Cap, 52-week High/Low, beta).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"ticker": {"type": "string"}},
+                    "required": ["ticker"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_company_earnings",
+                "description": "Get recent earnings surprise history (estimated EPS vs actual EPS). **IMPORTANT: The 'period' and 'year' return Fiscal periods, which may be up to 1 year ahead of the calendar date for companies like Apple (e.g. FY2025 Q1 ends in Dec 2024 calendar time). Focus on the 'period' date to explain the actual timeline to users.**",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"ticker": {"type": "string"}},
+                    "required": ["ticker"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "get_price_target",
                 "description": "Get analyst price target and consensus.",
                 "parameters": {
@@ -238,6 +262,8 @@ class ToolExecutor:
         handlers = {
             "get_stock_quote": self._stock_quote,
             "get_company_profile": self._company_profile,
+            "get_basic_financials": self._basic_financials,
+            "get_company_earnings": self._company_earnings,
             "get_price_target": self._price_target,
             "get_company_news": self._company_news,
             "get_market_news": self._market_news,
@@ -256,6 +282,14 @@ class ToolExecutor:
 
     def _company_profile(self, args):
         res = self.finnhub.get_company_profile(args.get("ticker"))
+        return json.dumps(res, ensure_ascii=False)
+
+    def _basic_financials(self, args):
+        res = self.finnhub.get_basic_financials(args.get("ticker"))
+        return json.dumps(res, ensure_ascii=False)
+
+    def _company_earnings(self, args):
+        res = self.finnhub.get_earnings(args.get("ticker"))
         return json.dumps(res, ensure_ascii=False)
 
     def _price_target(self, args):

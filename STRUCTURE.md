@@ -25,6 +25,8 @@ SKN22-4th-4Team/
 │   │   ├── llm_client.py       # 통합 LLM Client (Gemini/OpenAI)
 │   │   ├── report_generator.py # 투자 리포트 생성기
 │   │   └── vector_store.py     # 벡터 검색 (Supabase pgvector)
+│   ├── services/               # 핵심 비즈니스 로직 및 외부 연동 서비스
+│   │   └── news_analyzer.py    # Finnhub + FinBERT + GraphRAG 지능형 뉴스 분석
 │   ├── sql/                    # SQL 관련 모듈
 │   ├── tools/                  # 환율, 즐겨찾기, 검색 도구
 │   └── utils/                  # 유틸리티 (Plotly 차트, PDF, 티커 변환)

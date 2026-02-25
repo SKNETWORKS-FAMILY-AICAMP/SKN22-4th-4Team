@@ -61,6 +61,10 @@ graph TD
   - **Vector Store**: 텍스트 의미 검색 (Semantic Search)
   - **GraphRAG**: **Neo4j** Cypher 쿼리 + `NetworkX` 기반 기업 관계망 분석
   - **Hybrid Retrieval**: 벡터 검색 결과와 그래프 분석 결과를 결합하여 답변 생성
+- **FinBERT NLP Pipeline** (`src/services/news_analyzer.py`):
+  - **감성 분석 정밀도**: Financial PhraseBank 데이터셋(Full Agreement 기준)에서 **약 97% 정확도** 및 98% 수준의 F1-Score를 달성한 검증된 모델 사용
+  - **GraphRAG 확장**: 단일 기업 타겟을 넘어 대상 기업의 공급망 및 파트너사의 뉴스까지 긁어와 다차원 리스크 모니터링
+  - 매일 06:00 (KST) 스케줄러가 파이프라인을 자동 구동하여 Supabase에 적재
 - **LLM**: GPT-4.1-mini 기본 / Gemini 2.5 Flash 선택적 (`.env`로 전환)
 - **LLM Client**: `llm_client.py` — Gemini/OpenAI 통합 추상화 레이어
 - **LangSmith**: LLM 콜 트레이싱 및 모니터링 (선택적)
