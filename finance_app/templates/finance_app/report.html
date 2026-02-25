@@ -12,8 +12,9 @@
         font-weight: 600;
         align-items: center;
         transition: all 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
+
     .ticker-tag .remove-btn {
         margin-left: 8px;
         cursor: pointer;
@@ -21,89 +22,155 @@
         opacity: 0.6;
         transition: opacity 0.2s, color 0.2s;
     }
+
     .ticker-tag .remove-btn:hover {
         opacity: 1;
         color: #ff4444;
     }
+
     .search-results {
         position: absolute;
         top: 100%;
         left: 0;
         right: 0;
         z-index: 1000;
-        background-color: var(--bg-color);
-        border: 1px solid var(--border-color);
+        background-color: #1e293b;
+        /* 불투명한 진한 배경색 적용 */
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
         border-radius: 8px;
         max-height: 250px;
         overflow-y: auto;
         display: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
     }
+
     .search-result-item {
         padding: 12px 15px;
         cursor: pointer;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
         transition: background-color 0.2s;
+        color: #e2e8f0;
+        /* 글씨가 잘 보이도록 밝은 색상 적용 */
     }
+
     .search-result-item:hover {
-        background-color: var(--surface-color);
+        background-color: #334155;
+        /* hover 시 단일 솔리드 색상 적용 */
     }
+
     .search-result-item:last-child {
         border-bottom: none;
     }
+
     #report-content-box {
-        background-color: rgba(30, 41, 59, 0.4);
+        background-color: var(--surface-color, rgba(30, 41, 59, 0.4));
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
         border-radius: 12px;
-        padding: 2rem;
+        padding: 2.5rem;
         margin-top: 20px;
         min-height: 300px;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+        color: var(--text-color, #e2e8f0);
     }
+
     /* Markdown Typography Enhancements */
-    #report-content-box h1, #report-content-box h2, #report-content-box h3 {
-        color: #fff;
+    #report-content-box h1,
+    #report-content-box h2,
+    #report-content-box h3 {
+        color: var(--heading-color, #fff);
         font-weight: 700;
-        margin-top: 1.5rem;
-        margin-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
+        margin-top: 2rem;
+        margin-bottom: 1.2rem;
+        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
         padding-bottom: 0.5rem;
     }
-    #report-content-box h1 { font-size: 2rem; }
-    #report-content-box h2 { font-size: 1.5rem; }
-    #report-content-box h3 { font-size: 1.25rem; border-bottom: none; }
-    
-    #report-content-box p {
-        line-height: 1.7;
-        margin-bottom: 1rem;
+
+    #report-content-box h1 {
+        font-size: 2.2rem;
     }
-    
+
+    #report-content-box h2 {
+        font-size: 1.8rem;
+    }
+
+    #report-content-box h3 {
+        font-size: 1.4rem;
+        border-bottom: none;
+    }
+
+    #report-content-box p {
+        line-height: 1.8;
+        margin-bottom: 1.2rem;
+        font-size: 1.05rem;
+    }
+
     #report-content-box blockquote {
-        border-left: 4px solid var(--primary-accent);
-        padding-left: 1rem;
-        color: #a0aec0;
-        background: rgba(255,255,255,0.05);
-        padding: 1rem;
+        border-left: 4px solid var(--primary-color, #3b82f6);
+        color: var(--text-muted, #94a3b8);
+        background: var(--bg-color, rgba(0, 0, 0, 0.2));
+        padding: 1rem 1.5rem;
+        margin: 1.5rem 0;
         border-radius: 0 8px 8px 0;
     }
 
     #report-content-box table {
         width: 100%;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
         border-collapse: collapse;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
     }
 
-    #report-content-box th, #report-content-box td {
-        padding: 12px;
-        border-bottom: 1px solid var(--border-color);
+    #report-content-box th,
+    #report-content-box td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
         text-align: left;
     }
 
     #report-content-box th {
-        background-color: rgba(255,255,255,0.05);
+        background-color: rgba(0, 0, 0, 0.2);
         font-weight: 600;
-        color: var(--text-color);
+        color: var(--heading-color, #fff);
+    }
+
+    #report-content-box ul,
+    #report-content-box ol {
+        margin-bottom: 1.5rem;
+        padding-left: 2rem;
+    }
+
+    #report-content-box li {
+        margin-bottom: 0.5rem;
+        line-height: 1.7;
+    }
+
+    @keyframes result-blink-anim {
+        0% {
+            background-color: transparent;
+        }
+
+        50% {
+            background-color: rgba(74, 222, 128, 0.15);
+        }
+
+        100% {
+            background-color: transparent;
+        }
+    }
+
+    .result-blink {
+        animation: result-blink-anim 0.8s 2;
+        /* 0.8초씩 총 2번 점멸 */
+    }
+
+    /* Plotly 차트 모든 범례 및 축 텍스트 하얀색 강제 적용 */
+    .js-plotly-plot .plotly text {
+        fill: #ffffff !important;
     }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -121,22 +188,26 @@
     <div class="col-12">
         <div class="premium-card p-4">
             <div class="d-flex align-items-center mb-4 text-info">
-                 <i class="bi bi-lightbulb fs-4 me-3"></i>
-                 <span class="fs-6"><strong>검색 팁:</strong> 회사명(한글/영어)이나 티커를 입력하면 자동완성 목록이 나타납니다. (예: '테' → '테슬라')</span>
+                <i class="bi bi-lightbulb fs-4 me-3"></i>
+                <span class="fs-6"><strong>검색 팁:</strong> 회사명(한글/영어)이나 티커를 입력하면 자동완성 목록이 나타납니다. (예: '테' → '테슬라')</span>
             </div>
 
-            <div class="row mb-4">
-                <div class="col-md-9 mb-3 position-relative">
+            <div class="d-flex flex-column flex-md-row align-items-end gap-3 mb-4 w-100">
+                <div class="flex-grow-1 position-relative w-100">
                     <label for="tickerSearch" class="form-label text-secondary fw-bold">분석할 회사 검색 및 추가</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-main border-secondary text-muted"><i class="bi bi-search"></i></span>
-                        <input type="text" id="tickerSearch" class="form-control form-control-lg bg-main text-white border-secondary border-start-0" placeholder="티커(TSLA)나 이름(테슬라) 검색 또는 직접입력 후 Enter...">
-                        <button class="btn btn-outline-secondary px-4 fw-bold" type="button" id="addTickerBtn">추가</button>
+                        <input type="text" id="tickerSearch"
+                            class="form-control form-control-lg bg-main text-white border-secondary"
+                            placeholder="🔍 티커(TSLA)나 이름(테슬라) 검색 또는 직접입력 후 Enter...">
+                        <button class="btn btn-outline-secondary px-4 fw-bold" type="button" id="addTickerBtn"
+                            disabled>추가</button>
                     </div>
                     <div id="searchResults" class="search-results shadow border-secondary"></div>
                 </div>
-                <div class="col-md-3 mb-3 d-flex align-items-end">
-                    <button id="generateBtn" class="btn btn-premium w-100 py-2 fw-bold d-flex align-items-center justify-content-center h-100" style="min-height: 48px;">
+                <div class="w-100" style="max-width: 280px;">
+                    <button id="generateBtn"
+                        class="btn btn-premium w-100 py-2 fw-bold d-flex align-items-center justify-content-center"
+                        style="height: 48px;">
                         <i class="bi bi-pencil-square me-2"></i> 레포트 생성
                     </button>
                 </div>
@@ -144,33 +215,37 @@
 
             <div class="row mt-3 mb-2">
                 <div class="col-12">
-                     <h6 class="text-secondary fw-bold text-uppercase tracking-wide mb-3"><i class="bi bi-bar-chart-steps me-2"></i>차트 포함 옵션</h6>
-                     <div class="d-flex flex-wrap gap-4">
-                         <div class="form-check form-switch">
-                             <input class="form-check-input fs-5" type="checkbox" id="chartLine" checked>
-                             <label class="form-check-label text-light lh-lg ms-2" for="chartLine">주가 추이 (Line)</label>
-                         </div>
-                         <div class="form-check form-switch">
-                             <input class="form-check-input fs-5" type="checkbox" id="chartCandle">
-                             <label class="form-check-label text-light lh-lg ms-2" for="chartCandle">캔들 차트 (Candle)</label>
-                         </div>
-                         <div class="form-check form-switch">
-                             <input class="form-check-input fs-5" type="checkbox" id="chartVolume">
-                             <label class="form-check-label text-light lh-lg ms-2" for="chartVolume">거래량 (Volume)</label>
-                         </div>
-                         <div class="form-check form-switch">
-                             <input class="form-check-input fs-5" type="checkbox" id="chartFinance">
-                             <label class="form-check-label text-light lh-lg ms-2" for="chartFinance">재무 추이 (Financials)</label>
-                         </div>
-                     </div>
+                    <h6 class="text-secondary fw-bold text-uppercase tracking-wide mb-3"><i
+                            class="bi bi-bar-chart-steps me-2"></i>차트 포함 옵션</h6>
+                    <div class="d-flex flex-wrap gap-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input fs-5" type="checkbox" id="chartLine" checked>
+                            <label class="form-check-label text-light lh-lg ms-2" for="chartLine">주가 추이 (Line)</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input fs-5" type="checkbox" id="chartCandle">
+                            <label class="form-check-label text-light lh-lg ms-2" for="chartCandle">캔들 차트
+                                (Candle)</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input fs-5" type="checkbox" id="chartVolume">
+                            <label class="form-check-label text-light lh-lg ms-2" for="chartVolume">거래량 (Volume)</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input fs-5" type="checkbox" id="chartFinance">
+                            <label class="form-check-label text-light lh-lg ms-2" for="chartFinance">재무 추이
+                                (Financials)</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="row mt-4">
                 <div class="col-12">
                     <h6 class="text-secondary fw-bold text-uppercase tracking-wide mb-3">🎯 분석 대상 (선택됨)</h6>
-                    <div id="selectedTickersContainer" class="p-3 bg-main border border-secondary rounded-3" style="min-height: 70px;">
-                        <span class="text-muted small" id="emptyTickersMsg">비어 있음. 위에서 검색하여 기업을 추가하세요.</span>
+                    <div id="selectedTickersContainer" class="p-3 bg-main border border-secondary rounded-3"
+                        style="min-height: 70px;">
+                        <span class="text-light" id="emptyTickersMsg">비어 있음. 위에서 검색하여 기업을 추가하세요.</span>
                     </div>
                 </div>
             </div>
@@ -224,15 +299,35 @@
 
     let selectedTickers = new Set();
     let searchTimeout = null;
+    let renderedCharts = []; // Track rendered charts for resize fixes
+
+    // Window resize handler for Plotly charts
+    window.addEventListener('resize', function () {
+        requestAnimationFrame(() => {
+            renderedCharts.forEach(id => {
+                const chartDiv = document.getElementById(id);
+                if (chartDiv) {
+                    Plotly.Plots.resize(chartDiv);
+                }
+            });
+        });
+    });
 
     // Search input handler
-    tickerSearch.addEventListener('input', function(e) {
+    tickerSearch.addEventListener('input', function (e) {
         const query = e.target.value.trim();
         clearTimeout(searchTimeout);
-        
+
         if (query.length === 0) {
             searchResults.style.display = 'none';
+            addTickerBtn.disabled = true;
+            addTickerBtn.classList.remove('btn-primary');
+            addTickerBtn.classList.add('btn-outline-secondary');
             return;
+        } else {
+            addTickerBtn.disabled = false;
+            addTickerBtn.classList.remove('btn-outline-secondary');
+            addTickerBtn.classList.add('btn-primary');
         }
 
         searchTimeout = setTimeout(() => {
@@ -243,13 +338,23 @@
                     if (data.results && data.results.length > 0) {
                         data.results.forEach(item => {
                             const div = document.createElement('div');
-                            div.className = 'search-result-item text-light';
+
+                            // 직접 입력 박스는 점멸하지 않게 처리
+                            if (item.label.includes('직접 입력')) {
+                                div.className = 'search-result-item text-white';
+                            } else {
+                                div.className = 'search-result-item text-white result-blink';
+                            }
+
                             // bold rendering for markdown in label
                             div.innerHTML = marked.parseInline(item.label);
                             div.onclick = () => {
                                 addTicker(item.value);
                                 searchResults.style.display = 'none';
                                 tickerSearch.value = '';
+                                addTickerBtn.disabled = true;
+                                addTickerBtn.classList.remove('btn-primary');
+                                addTickerBtn.classList.add('btn-outline-secondary');
                             };
                             searchResults.appendChild(div);
                         });
@@ -266,7 +371,7 @@
     });
 
     // Close search results on outside click
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (!tickerSearch.contains(e.target) && !searchResults.contains(e.target)) {
             searchResults.style.display = 'none';
         }
@@ -279,11 +384,14 @@
             addTicker(val);
             tickerSearch.value = '';
             searchResults.style.display = 'none';
+            addTickerBtn.disabled = true;
+            addTickerBtn.classList.remove('btn-primary');
+            addTickerBtn.classList.add('btn-outline-secondary');
         }
     }
 
     addTickerBtn.addEventListener('click', handleManualAdd);
-    tickerSearch.addEventListener('keypress', function(e) {
+    tickerSearch.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') handleManualAdd();
     });
 
@@ -311,7 +419,7 @@
         }
 
         emptyTickersMsg.style.display = 'none';
-        
+
         // Remove existing tags
         Array.from(selectedTickersContainer.children).forEach(child => {
             if (child !== emptyTickersMsg) child.remove();
@@ -327,14 +435,14 @@
     }
 
     // Generate Report
-    generateBtn.addEventListener('click', function() {
+    generateBtn.addEventListener('click', function () {
         if (selectedTickers.size === 0) {
             alert('분석할 대상(티커)을 하나 이상 선택해주세요.');
             return;
         }
 
         const tickersList = Array.from(selectedTickers);
-        
+
         // Fetch chart preferences
         const chartOptions = {
             line: document.getElementById('chartLine').checked,
@@ -342,7 +450,7 @@
             volume: document.getElementById('chartVolume').checked,
             finance: document.getElementById('chartFinance').checked
         };
-        
+
         // UI updates
         generateBtn.disabled = true;
         tickerSearch.disabled = true;
@@ -351,6 +459,7 @@
         resultsArea.style.display = 'none';
         reportContentBox.innerHTML = '';
         chartsContainer.innerHTML = '';
+        renderedCharts = []; // Reset tracked charts
 
         fetch('/api/report/generate/', {
             method: 'POST',
@@ -358,108 +467,116 @@
                 'Content-Type': 'application/json',
                 // Add CSRF token header if needed
             },
-            body: JSON.stringify({ 
-                tickers: tickersList, 
-                charts: chartOptions 
+            body: JSON.stringify({
+                tickers: tickersList,
+                charts: chartOptions
             })
         })
-        .then(res => res.json())
-        .then(data => {
-            generateBtn.disabled = false;
-            tickerSearch.disabled = false;
-            addTickerBtn.disabled = false;
-            reportLoader.style.display = 'none';
+            .then(res => res.json())
+            .then(data => {
+                generateBtn.disabled = false;
+                tickerSearch.disabled = false;
+                addTickerBtn.disabled = false;
+                reportLoader.style.display = 'none';
 
-            if (data.error) {
-                alert(`오류 발생: ${data.error}`);
-                return;
-            }
-
-            if (data.success) {
-                resultsArea.style.display = 'block';
-                
-                // Render markdown
-                reportContentBox.innerHTML = marked.parse(data.report_md);
-                
-                // Update hidden inputs for PDF download
-                hiddenReportMd.value = data.report_md;
-                hiddenFilePrefix.value = data.file_prefix;
-
-                // Render charts if any
-                if (data.charts && data.charts.length > 0) {
-                    data.charts.forEach((chartObj, idx) => {
-                        const tickerHeader = document.createElement('h4');
-                        tickerHeader.className = 'text-info mt-5 mb-3';
-                        tickerHeader.innerText = `${chartObj.ticker} 가격/재무 차트`;
-                        chartsContainer.appendChild(tickerHeader);
-
-                        // Line Chart
-                        if (chartObj.line_chart) {
-                            const lineDiv = document.createElement('div');
-                            lineDiv.id = `chart-line-${idx}`;
-                            lineDiv.className = 'mb-4 premium-card p-2';
-                            chartsContainer.appendChild(lineDiv);
-                            const parsedLine = JSON.parse(chartObj.line_chart);
-                            let layout = parsedLine.layout || {};
-                            layout.plot_bgcolor = 'transparent';
-                            layout.paper_bgcolor = 'transparent';
-                            layout.font = { color: 'var(--text-primary)' };
-                            Plotly.newPlot(lineDiv.id, parsedLine.data, layout, {responsive: true});
-                        }
-
-                        // Candle Chart
-                        if (chartObj.candle_chart) {
-                            const candleDiv = document.createElement('div');
-                            candleDiv.id = `chart-candle-${idx}`;
-                            candleDiv.className = 'mb-4 premium-card p-2';
-                            chartsContainer.appendChild(candleDiv);
-                            const parsedCandle = JSON.parse(chartObj.candle_chart);
-                            let layout = parsedCandle.layout || {};
-                            layout.plot_bgcolor = 'transparent';
-                            layout.paper_bgcolor = 'transparent';
-                            layout.font = { color: 'var(--text-primary)' };
-                            Plotly.newPlot(candleDiv.id, parsedCandle.data, layout, {responsive: true});
-                        }
-                        
-                        // Volume Chart
-                        if (chartObj.volume_chart) {
-                            const volDiv = document.createElement('div');
-                            volDiv.id = `chart-vol-${idx}`;
-                            volDiv.className = 'mb-4 premium-card p-2';
-                            chartsContainer.appendChild(volDiv);
-                            const parsedVol = JSON.parse(chartObj.volume_chart);
-                            let layout = parsedVol.layout || {};
-                            layout.plot_bgcolor = 'transparent';
-                            layout.paper_bgcolor = 'transparent';
-                            layout.font = { color: 'var(--text-primary)' };
-                            Plotly.newPlot(volDiv.id, parsedVol.data, layout, {responsive: true});
-                        }
-
-                        // Finance Chart
-                        if (chartObj.finance_chart) {
-                            const finDiv = document.createElement('div');
-                            finDiv.id = `chart-fin-${idx}`;
-                            finDiv.className = 'mb-4 premium-card p-2';
-                            chartsContainer.appendChild(finDiv);
-                            const parsedFin = JSON.parse(chartObj.finance_chart);
-                            let layout = parsedFin.layout || {};
-                            layout.plot_bgcolor = 'transparent';
-                            layout.paper_bgcolor = 'transparent';
-                            layout.font = { color: 'var(--text-primary)' };
-                            Plotly.newPlot(finDiv.id, parsedFin.data, layout, {responsive: true});
-                        }
-                    });
+                if (data.error) {
+                    alert(`오류 발생: ${data.error}`);
+                    return;
                 }
-            }
-        })
-        .catch(err => {
-            console.error('Generation error:', err);
-            generateBtn.disabled = false;
-            tickerSearch.disabled = false;
-            addTickerBtn.disabled = false;
-            reportLoader.style.display = 'none';
-            alert('레포트 생성 중 네트워크 오류가 발생했습니다.');
-        });
+
+                if (data.success) {
+                    resultsArea.style.display = 'block';
+
+                    // Render markdown
+                    reportContentBox.innerHTML = marked.parse(data.report_md);
+
+                    // Update hidden inputs for PDF download
+                    hiddenReportMd.value = data.report_md;
+                    hiddenFilePrefix.value = data.file_prefix;
+
+                    // Render charts if any
+                    if (data.charts && data.charts.length > 0) {
+                        data.charts.forEach((chartObj, idx) => {
+                            const tickerHeader = document.createElement('h4');
+                            tickerHeader.className = 'text-info mt-5 mb-3';
+                            tickerHeader.innerText = `${chartObj.ticker} 가격/재무 차트`;
+                            chartsContainer.appendChild(tickerHeader);
+
+                            // Line Chart
+                            if (chartObj.line_chart) {
+                                const lineDiv = document.createElement('div');
+                                lineDiv.id = `chart-line-${idx}`;
+                                lineDiv.className = 'mb-4 premium-card p-2 w-100';
+                                lineDiv.style.minHeight = '450px';
+                                chartsContainer.appendChild(lineDiv);
+                                const parsedLine = JSON.parse(chartObj.line_chart);
+                                let layout = parsedLine.layout || {};
+                                layout.plot_bgcolor = 'transparent';
+                                layout.paper_bgcolor = 'transparent';
+                                layout.font = { color: 'var(--text-primary)' };
+                                Plotly.newPlot(lineDiv.id, parsedLine.data, layout, { responsive: true });
+                                renderedCharts.push(lineDiv.id);
+                            }
+
+                            // Candle Chart
+                            if (chartObj.candle_chart) {
+                                const candleDiv = document.createElement('div');
+                                candleDiv.id = `chart-candle-${idx}`;
+                                candleDiv.className = 'mb-4 premium-card p-2 w-100';
+                                candleDiv.style.minHeight = '450px';
+                                chartsContainer.appendChild(candleDiv);
+                                const parsedCandle = JSON.parse(chartObj.candle_chart);
+                                let layout = parsedCandle.layout || {};
+                                layout.plot_bgcolor = 'transparent';
+                                layout.paper_bgcolor = 'transparent';
+                                layout.font = { color: 'var(--text-primary)' };
+                                Plotly.newPlot(candleDiv.id, parsedCandle.data, layout, { responsive: true });
+                                renderedCharts.push(candleDiv.id);
+                            }
+
+                            // Volume Chart
+                            if (chartObj.volume_chart) {
+                                const volDiv = document.createElement('div');
+                                volDiv.id = `chart-vol-${idx}`;
+                                volDiv.className = 'mb-4 premium-card p-2 w-100';
+                                volDiv.style.minHeight = '450px';
+                                chartsContainer.appendChild(volDiv);
+                                const parsedVol = JSON.parse(chartObj.volume_chart);
+                                let layout = parsedVol.layout || {};
+                                layout.plot_bgcolor = 'transparent';
+                                layout.paper_bgcolor = 'transparent';
+                                layout.font = { color: 'var(--text-primary)' };
+                                Plotly.newPlot(volDiv.id, parsedVol.data, layout, { responsive: true });
+                                renderedCharts.push(volDiv.id);
+                            }
+
+                            // Finance Chart
+                            if (chartObj.finance_chart) {
+                                const finDiv = document.createElement('div');
+                                finDiv.id = `chart-fin-${idx}`;
+                                finDiv.className = 'mb-4 premium-card p-2 w-100';
+                                finDiv.style.minHeight = '450px';
+                                chartsContainer.appendChild(finDiv);
+                                const parsedFin = JSON.parse(chartObj.finance_chart);
+                                let layout = parsedFin.layout || {};
+                                layout.plot_bgcolor = 'transparent';
+                                layout.paper_bgcolor = 'transparent';
+                                layout.font = { color: 'var(--text-primary)' };
+                                Plotly.newPlot(finDiv.id, parsedFin.data, layout, { responsive: true });
+                                renderedCharts.push(finDiv.id);
+                            }
+                        });
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Generation error:', err);
+                generateBtn.disabled = false;
+                tickerSearch.disabled = false;
+                addTickerBtn.disabled = false;
+                reportLoader.style.display = 'none';
+                alert('레포트 생성 중 네트워크 오류가 발생했습니다.');
+            });
     });
 </script>
 {% endblock %}

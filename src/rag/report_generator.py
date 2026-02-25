@@ -380,7 +380,7 @@ class ReportGenerator(RAGBase):
             # Generate report with selected model
             try:
                 logger.info(f"Generating report with model: {self.model}")
-                report = self._llm_chat(messages, max_tokens=3000)
+                report = self._llm_chat(messages, max_tokens=8192)
 
                 if not report:
                     raise ValueError("Empty response from model")
@@ -389,7 +389,7 @@ class ReportGenerator(RAGBase):
                 logger.warning(f"Model {self.model} failed: {e}. Retrying...")
                 used_model = "fallback"
                 try:
-                    report = self._llm_chat(messages, max_tokens=3000, temperature=0.2)
+                    report = self._llm_chat(messages, max_tokens=8192, temperature=0.2)
                 except Exception as e2:
                     logger.error(f"Retry failed: {e2}")
                     return f"❌ 레포트 생성 실패: {str(e2)}"
@@ -459,7 +459,7 @@ class ReportGenerator(RAGBase):
             try:
                 # Generate comparison report
                 logger.info(f"Generating comparison report with model: {self.model}")
-                content = self._llm_chat(messages, max_tokens=4000)
+                content = self._llm_chat(messages, max_tokens=8192)
                 if not content:
                     raise ValueError("Empty response from model")
                 return content
@@ -467,7 +467,7 @@ class ReportGenerator(RAGBase):
             except Exception as e:
                 logger.warning(f"Model {self.model} failed: {e}. Retrying...")
                 try:
-                    content = self._llm_chat(messages, max_tokens=4000, temperature=0.2)
+                    content = self._llm_chat(messages, max_tokens=8192, temperature=0.2)
                     if not content:
                         return "❌ 비교 보고서 생성 실패: 모델로부터 내용을 받아오지 못했습니다."
                     return content
