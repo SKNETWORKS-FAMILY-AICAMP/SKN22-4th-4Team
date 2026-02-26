@@ -35,10 +35,10 @@ graph TD
     Login -->|2. 인증 성공| UI["💻 Django Web App (Premium UI)"]
     
     subgraph Frontend Logic
-        Login -->|Auth Request| Auth[🔐 Supabase Auth]
-        UI -->|Chat Query| Validator[🛡️ Input Validator]
-        UI -->|Report Request| ReportGen[📝 Report Generator]
-        UI -->|Manage Favorites| Watchlistmgr[⭐ Watchlist Manager]
+        Login -->|Auth Request| Auth["🔐 Supabase Auth"]
+        UI -->|Chat Query| Validator["🛡️ Input Validator"]
+        UI -->|Report Request| ReportGen["📝 Report Generator"]
+        UI -->|Manage Favorites| Watchlistmgr["⭐ Watchlist Manager"]
     end
 
     subgraph "Data & State"
@@ -47,8 +47,8 @@ graph TD
     end
 
     subgraph RAG Engine
-        Validator -->|Valid Query| Agent[🤖 LLM Client]
-        ReportGen -->|Data Fetch| Retriever[🔍 Data Retriever]
+        Validator -->|Valid Query| Agent["🤖 LLM Client"]
+        ReportGen -->|Data Fetch| Retriever["🔍 Data Retriever"]
         
         Agent <-->|Vector Search| VectorDB[("🗄️ Supabase pgvector")]
         Agent <-->|Graph Search| GraphDB[("🕸️ Neo4j GraphDB")]
@@ -58,16 +58,16 @@ graph TD
     end
 
     subgraph Data Sources
-        Retriever -->|Live Price/News| Finnhub[📡 Finnhub API]
-        Retriever -->|Market Info| Yahoo[📈 yfinance API]
-        Retriever -->|Unknown Ticker| Tavily[🕵️ Tavily Search]
-        VectorDB <-->|Sync| SEC[📄 SEC 10-K]
+        Retriever -->|Live Price/News| Finnhub["📡 Finnhub API"]
+        Retriever -->|Market Info| Yahoo["📈 yfinance API"]
+        Retriever -->|Unknown Ticker| Tavily["🕵️ Tavily Search"]
+        VectorDB <-->|Sync| SEC["📄 SEC 10-K"]
     end
 
-    Retriever -->|Aggregated Context| LLM[🧠 GPT-4.1-mini]
+    Retriever -->|Aggregated Context| LLM["🧠 GPT-4.1-mini / Gemini"]
     Agent -->|Final Answer| LLM
     LLM -->|Response| UI
-    LLM -.->|Tracing| LS[📊 LangSmith]
+    LLM -.->|Tracing| LS["📊 LangSmith"]
 ```
 
 ---
