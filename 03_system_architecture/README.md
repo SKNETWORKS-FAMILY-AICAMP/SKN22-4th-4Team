@@ -12,14 +12,14 @@ graph TD
     Login -->|2. 인증 성공| UI["💻 Django Web App (Premium UI)"]
     
     subgraph Frontend Logic
-        Login -->|Auth Request| Auth["🔐 Django Auth"]
+        Login -->|Auth Request| Auth["🔐 Supabase Auth"]
         UI -->|Chat Query| Validator["🛡️ Input Validator"]
         UI -->|Report Request| ReportGen["📝 Report Generator"]
         UI -->|Manage Favorites| Watchlistmgr["⭐ Watchlist Manager"]
     end
 
     subgraph "Data & State"
-        Auth <-->|Verify| UserDB[("👥 SQLite DB")]
+        Auth <-->|Verify| UserDB[("👥 Users Table")]
         Watchlistmgr <-->|Sync| UserDB
     end
 
