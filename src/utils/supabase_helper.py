@@ -23,6 +23,10 @@ def get_supabase_client() -> Client:
         return None
 
 
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
 def fetch_all_tickers():
     """Fetch all tickers from Supabase for local searching"""
     client = get_supabase_client()
