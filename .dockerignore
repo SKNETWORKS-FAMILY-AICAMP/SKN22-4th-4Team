@@ -1,0 +1,28 @@
+# Python / Django
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# Environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# DB
+db.sqlite3
+*.sqlite3
+
+# Git
+.git/
+.gitignore
+
+# Others
+.DS_Store
+*.log
+.vscode/
+.idea/
