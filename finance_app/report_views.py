@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 try:
     from src.rag.report_generator import ReportGenerator
     from src.utils.ticker_resolver import resolve_to_ticker
-    from src.utils.ticker_search_agent import search_tickers
+    from src.utils.supabase_helper import search_tickers
     from src.utils.pdf_utils import create_pdf
     from src.utils.plotly_charts import (
         generate_line_chart_plotly,
