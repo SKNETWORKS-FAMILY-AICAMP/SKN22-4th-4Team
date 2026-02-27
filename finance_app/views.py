@@ -45,7 +45,7 @@ except ImportError as e:
     search_tickers = None
     create_pdf = None
 
-from .models import Watchlist
+from .models import Watchlist, Notification
 
 logger = logging.getLogger(__name__)
 
@@ -154,12 +154,10 @@ def home(request):
         except Exception as e:
             logger.warning(f"Supabase Revenue Error: {e}")
 
-    # 환율 + DB 쿼리 동시 실행
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        f1 = executor.submit(fetch_exchange_rates)
-        f2 = executor.submit(fetch_company_data)
-        f1.result()
-        f2.result()
+    # 환율 + DB 쿼리 순차 실행 (런서버 ThreadPool 오류 방지)
+    # ThreadPoolExecutor를 뷰 내부에서 생성하면 런서버 재시작/종료 시 RuntimeError가 발생할 수 있습니다.
+    fetch_exchange_rates()
+    fetch_company_data()
 
     # 컨텍스트 조립
     context = {
@@ -315,16 +313,20 @@ def calendar_api(request):
         else:
             watchlist = default_watchlist
 
-        q_map = {
-            1: ("01-01", "03-31"),
-            2: ("04-01", "06-30"),
-            3: ("07-01", "09-30"),
-            4: ("10-01", "12-31"),
-        }
-
-        start_md, end_md = q_map.get(quarter, ("01-01", "12-31"))
-        start_date = datetime.strptime(f"{year}-{start_md}", "%Y-%m-%d").date()
-        end_date = datetime.strptime(f"{year}-{end_md}", "%Y-%m-%d").date()
+        # 실적 귀속 분기 기준 실제 발표일(Reporting Date) 매핑
+        # 예: 2025년 4분기 실적은 2026년 1월~3월 발표
+        if quarter == 1:
+            start_date = datetime.strptime(f"{year}-04-01", "%Y-%m-%d").date()
+            end_date = datetime.strptime(f"{year}-06-30", "%Y-%m-%d").date()
+        elif quarter == 2:
+            start_date = datetime.strptime(f"{year}-07-01", "%Y-%m-%d").date()
+            end_date = datetime.strptime(f"{year}-09-30", "%Y-%m-%d").date()
+        elif quarter == 3:
+            start_date = datetime.strptime(f"{year}-10-01", "%Y-%m-%d").date()
+            end_date = datetime.strptime(f"{year}-12-31", "%Y-%m-%d").date()
+        else:  # quarter == 4
+            start_date = datetime.strptime(f"{year + 1}-01-01", "%Y-%m-%d").date()
+            end_date = datetime.strptime(f"{year + 1}-03-31", "%Y-%m-%d").date()
 
         results = []
 
@@ -408,6 +410,11 @@ def watchlist_add(request):
         # 한글명/영문명 → 티커 자동 변환 (예: "애플" → "AAPL")
         if resolve_to_ticker:
             ticker, reason = resolve_to_ticker(raw_input)
+            if not ticker:
+                return JsonResponse(
+                    {"error": reason or "유효하지 않은 기업명 또는 티커입니다."},
+                    status=400,
+                )
         else:
             ticker = raw_input.upper()
             reason = None
@@ -442,7 +449,70 @@ def watchlist_remove(request):
 @login_required
 def watchlist_list(request):
     """관심 기업 목록 API (GET)"""
-    tickers = list(
-        Watchlist.objects.filter(user=request.user).values_list("ticker", flat=True)
-    )
-    return JsonResponse({"tickers": tickers})
+    tickers_data = [
+        {"ticker": w.ticker, "alert_threshold_percent": w.alert_threshold_percent}
+        for w in Watchlist.objects.filter(user=request.user)
+    ]
+    return JsonResponse({"tickers": tickers_data})
+
+
+@login_required
+def watchlist_update_alert(request):
+    """관심 기업 알림 변동률 수정 API (POST)"""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    try:
+        data = json.loads(request.body)
+        ticker = data.get("ticker", "").strip().upper()
+        threshold = float(data.get("alert_threshold", 5.0))
+
+        watch_item = Watchlist.objects.filter(user=request.user, ticker=ticker).first()
+        if watch_item:
+            watch_item.alert_threshold_percent = threshold
+            watch_item.save()
+            return JsonResponse({"success": True})
+        return JsonResponse({"error": "Item not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ─── Notification API ────────────────────────────────────────────────────
+
+
+@login_required
+def get_notifications(request):
+    """안 읽은 알림 목록 API (GET)"""
+    notifications = Notification.objects.filter(
+        user=request.user, is_read=False
+    ).order_by("-created_at")[:20]
+    data = []
+    for n in notifications:
+        data.append(
+            {
+                "id": n.id,
+                "ticker": n.ticker,
+                "title": n.title,
+                "message": n.message,
+                "type": n.notification_type,
+                "created_at": n.created_at.strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+    return JsonResponse({"notifications": data})
+
+
+@login_required
+@csrf_exempt
+def mark_notification_read(request, notif_id):
+    """알림 읽음 처리 API (POST)"""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+
+    try:
+        notif = Notification.objects.get(id=notif_id, user=request.user)
+        notif.is_read = True
+        notif.save()
+        return JsonResponse({"success": True})
+    except Notification.DoesNotExist:
+        return JsonResponse({"error": "알림을 찾을 수 없습니다."}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

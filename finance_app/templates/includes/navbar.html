@@ -3,12 +3,82 @@
     <div class="d-flex justify-content-end align-items-center w-100">
         <!-- Auth & Settings Area in Navbar instead of Sidebar bottom -->
         <div class="d-flex align-items-center gap-3">
-            <div class="position-relative">
-                <i class="bi bi-bell text-secondary fs-5" style="cursor: pointer;"></i>
-                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
-                    <span class="visually-hidden">New alerts</span>
-                </span>
+            <div class="dropdown me-2">
+                <a href="#" class="d-flex align-items-center text-secondary text-decoration-none dropdown-toggle position-relative px-2 py-1 bg-transparent border-0" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-bell fs-5" style="cursor: pointer;"></i>
+                    <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="display: none;">
+                        <span class="visually-hidden">New alerts</span>
+                    </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" id="notificationList" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                    <li><h6 class="dropdown-header">알림</h6></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><span class="dropdown-item text-secondary text-center py-2" id="noNotifications">알림이 없습니다.</span></li>
+                </ul>
             </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const badge = document.getElementById('notificationBadge');
+                    const list = document.getElementById('notificationList');
+                    const noNotif = document.getElementById('noNotifications');
+                    
+                    function loadNotifications() {
+                        fetch('/api/notifications/')
+                            .then(res => res.json())
+                            .then(data => {
+                                const notifs = data.notifications || [];
+                                if (notifs.length > 0) {
+                                    badge.style.display = 'block';
+                                    
+                                    // 기존 항목들 제거 (헤더 2개 제외)
+                                    while (list.children.length > 2) {
+                                        list.removeChild(list.lastChild);
+                                    }
+                                    
+                                    notifs.forEach(notif => {
+                                        const li = document.createElement('li');
+                                        li.innerHTML = `
+                                            <a class="dropdown-item py-2" href="#" onclick="markAsRead(${notif.id}); return false;" style="white-space: normal;">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1 text-primary-accent" style="font-size: 0.85rem;">${notif.title}</h6>
+                                                    <small class="text-muted" style="font-size: 0.7rem;">${notif.created_at}</small>
+                                                </div>
+                                                <p class="mb-1 text-secondary" style="font-size: 0.8rem; line-height: 1.4;">${notif.message}</p>
+                                            </a>
+                                        `;
+                                        list.appendChild(li);
+                                    });
+                                } else {
+                                    badge.style.display = 'none';
+                                    while (list.children.length > 2) {
+                                        list.removeChild(list.lastChild);
+                                    }
+                                    list.appendChild(noNotif.parentElement);
+                                }
+                            })
+                            .catch(e => console.error("알림 로드 실패:", e));
+                    }
+                    
+                    window.markAsRead = function(id) {
+                        fetch(`/api/notifications/read/${id}/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(res => res.json())
+                        .then(() => {
+                            loadNotifications(); // Reload list
+                        });
+                    };
+                    
+                    loadNotifications();
+                    // 주기적으로 알림 확인 (1분마다)
+                    setInterval(loadNotifications, 60000);
+                });
+            </script>
             <div class="dropdown me-2">
                 <a href="#" class="d-flex align-items-center text-primary text-decoration-none dropdown-toggle border rounded-pill px-3 py-1 bg-main" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: var(--border-color) !important;">
                     <i class="bi bi-moon-stars-fill fs-5 text-warning" id="themeIcon"></i>
