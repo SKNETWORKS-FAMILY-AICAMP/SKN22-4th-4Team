@@ -39,7 +39,7 @@ class LLMClient:
         self.provider = os.getenv("LLM_PROVIDER", "openai").lower()
         self.model = model_name or os.getenv("CHAT_MODEL", "gpt-4.1-mini")
         self.temperature = float(os.getenv("TEMPERATURE", "0.1"))
-        self.max_tokens = int(os.getenv("MAX_TOKENS", "4096"))
+        self.max_tokens = int(os.getenv("MAX_TOKENS", "16384"))
 
         if self.provider == "gemini":
             self._init_gemini()

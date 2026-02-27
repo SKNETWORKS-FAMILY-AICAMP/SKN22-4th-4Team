@@ -9,10 +9,50 @@ from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import requests
 from dotenv import load_dotenv
+from django.core.cache import cache
+from functools import wraps
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+def api_cache(timeout=300):
+    """API 호출 결과를 캐싱하는 데코레이터"""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            # 캐시 키 생성
+            key_parts = (
+                [func.__name__]
+                + [str(a) for a in args]
+                + [f"{k}={v}" for k, v in kwargs.items()]
+            )
+            cache_key = "_".join(key_parts).replace(" ", "_")
+
+            # 1. 캐시 확인
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                logger.debug(f"Cache hit for {cache_key}")
+                return cached_data
+
+            # 2. 캐시 미스 시 원본 함수 호출
+            result = func(self, *args, **kwargs)
+
+            # 3. 에러 결과가 아니면 캐시 저장
+            if result and not (isinstance(result, dict) and "error" in result):
+                cache.set(cache_key, result, timeout=timeout)
+                logger.debug(f"Cache saved for {cache_key}")
+
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+# 0227mj
 
 
 class StockAPIClient:
@@ -181,11 +221,13 @@ class StockAPIClient:
             return {"error": "주가 데이터를 가져오지 못했습니다."}
 
     # ========== 기업 정보 ==========
-
+    # api_cache 추가
+    @api_cache(timeout=86400)  # 24시간
     def get_company_profile(self, symbol: str) -> Dict:
         """기업 프로필 조회"""
         return self._request("stock/profile2", {"symbol": symbol.upper()})
 
+    @api_cache(timeout=86400)  # 24시간
     def get_company_peers(self, symbol: str) -> List[str]:
         """경쟁사/유사기업 목록"""
         result = self._request("stock/peers", {"symbol": symbol.upper()})
@@ -193,6 +235,7 @@ class StockAPIClient:
 
     # ========== 뉴스 ==========
 
+    @api_cache(timeout=900)  # 15분
     def get_company_news(
         self, symbol: str, from_date: str = None, to_date: str = None  # YYYY-MM-DD
     ) -> List[Dict]:
@@ -210,6 +253,7 @@ class StockAPIClient:
         )
         return result if isinstance(result, list) else []
 
+    @api_cache(timeout=900)  # 15분
     def get_market_news(self, category: str = "general") -> List[Dict]:
         """
         시장 전체 뉴스
@@ -220,6 +264,7 @@ class StockAPIClient:
 
     # ========== SEC 공시 ==========
 
+    @api_cache(timeout=3600)  # 1시간
     def get_sec_filings(
         self,
         symbol: str = None,
@@ -249,6 +294,7 @@ class StockAPIClient:
 
     # ========== 재무 데이터 ==========
 
+    @api_cache(timeout=86400)  # 24시간
     def get_basic_financials(self, symbol: str, metric: str = "all") -> Dict:
         """
         기본 재무 지표
@@ -306,6 +352,7 @@ class StockAPIClient:
             logger.error(f"yfinance financials fallback failed: {e}")
             return {"error": "재무 지표를 가져오지 못했습니다."}
 
+    @api_cache(timeout=86400)  # 24시간
     def get_financials_reported(self, symbol: str, freq: str = "annual") -> Dict:
         """
         실제 보고된 재무제표 데이터
@@ -315,6 +362,7 @@ class StockAPIClient:
             "stock/financials-reported", {"symbol": symbol.upper(), "freq": freq}
         )
 
+    @api_cache(timeout=86400)  # 24시간
     def get_earnings(self, symbol: str) -> List[Dict]:
         """실적 발표 데이터 (EPS)"""
         result = self._request("stock/earnings", {"symbol": symbol.upper()})
@@ -322,11 +370,13 @@ class StockAPIClient:
 
     # ========== 추천/분석 ==========
 
+    @api_cache(timeout=86400)  # 24시간
     def get_recommendation_trends(self, symbol: str) -> List[Dict]:
         """애널리스트 추천 트렌드 (Buy/Hold/Sell)"""
         result = self._request("stock/recommendation", {"symbol": symbol.upper()})
         return result if isinstance(result, list) else []
 
+    @api_cache(timeout=86400)  # 24시간
     def get_price_target(self, symbol: str) -> Dict:
         """
         목표 주가 (애널리스트 컨센서스)
@@ -359,6 +409,7 @@ class StockAPIClient:
             logger.error(f"yfinance fallback failed: {e}")
             return {"error": "목표주가 데이터를 가져오지 못했습니다."}
 
+    @api_cache(timeout=86400)  # 24시간
     def get_earnings_surprises(self, symbol: str) -> List[Dict]:
         """실적 서프라이즈 데이터"""
         result = self._request("stock/earnings", {"symbol": symbol.upper()})
@@ -366,6 +417,7 @@ class StockAPIClient:
 
     # ========== 캘린더 (FMP) ==========
 
+    @api_cache(timeout=86400)  # 24시간
     def get_earnings_calendar(
         self, from_date: str = None, to_date: str = None
     ) -> List[Dict]:
