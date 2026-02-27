@@ -41,7 +41,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     "finance_app",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
+    "allauth.socialaccount.providers.kakao",
+    "allauth.socialaccount.providers.naver",
 ]
 
 MIDDLEWARE = [
@@ -52,6 +60,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -135,3 +144,45 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Allauth Settings
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
+            'key': ''
+        }
+    },
+    'github': {
+        'APP': {
+            'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
+            'secret': os.getenv('GITHUB_CLIENT_SECRET', ''),
+            'key': ''
+        }
+    },
+    'kakao': {
+        'APP': {
+            'client_id': os.getenv('KAKAO_CLIENT_ID', ''),
+            'secret': os.getenv('KAKAO_CLIENT_SECRET', ''),
+            'key': ''
+        }
+    },
+    'naver': {
+        'APP': {
+            'client_id': os.getenv('NAVER_CLIENT_ID', ''),
+            'secret': os.getenv('NAVER_CLIENT_SECRET', ''),
+            'key': ''
+        }
+    }
+}

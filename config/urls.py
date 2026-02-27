@@ -6,5 +6,6 @@ urlpatterns = [
     path(
         "accounts/", include("django.contrib.auth.urls")
     ),  # Provides login, logout, etc.
+    path("accounts/", include("allauth.urls")), # Social login URLs
     path("", include("finance_app.urls")),
 ]
