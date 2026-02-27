@@ -284,6 +284,7 @@ class VectorStore:
     def search_by_company(self, query: str, company: str, k: int = 5) -> List[Dict]:
         """
         Search for documents related to a specific company
+        Uses match_documents_by_ticker RPC for pre-filtering by ticker at the DB level.
 
         Args:
             query: Search query
@@ -293,26 +294,64 @@ class VectorStore:
         Returns:
             List of relevant documents
         """
-        # [Optimization] 1. Retrieve a larger pool of documents (k=100) to ensure company-specific docs are included
-        # This drastically improves Recall for specific company queries
-        results = self.similarity_search(query, k=100)
+        try:
+            # 1. Generate query embedding
+            query_embedding = self._get_embedding(query)
 
-        # 2. Filter by company ticker in metadata
-        filtered = [
-            doc for doc in results if doc.get("metadata", {}).get("ticker") == company
-        ]
+            # 2. Pre-filtering: DB 단에서 해당 기업 문서만 먼저 필터링 후 유사도 검색
+            initial_k = max(k * 4, 20)  # Reranking을 위해 더 많이 가져옴
+            response = self.supabase.rpc(
+                "match_documents_by_ticker",
+                {
+                    "query_embedding": query_embedding,
+                    "match_ticker": company,
+                    "match_count": initial_k,
+                    "match_threshold": 0.0,
+                },
+            ).execute()
 
-        if not filtered:
-            logger.warning(
-                f"No documents found for company {company} in top 100 results."
-            )
-            return []
+            if not response.data:
+                logger.warning(
+                    f"No documents found for company {company} via match_documents_by_ticker."
+                )
+                return []
 
-        # 3. Rerank the filtered results using CrossEncoder
-        # This improves Precision by re-scoring the candidates
-        reranked = self.rerank_results(query, filtered, k)
+            # 3. Format results
+            documents = []
+            for item in response.data:
+                documents.append(
+                    {
+                        "id": item.get("id"),
+                        "content": item.get("content"),
+                        "metadata": item.get("metadata"),
+                        "similarity": item.get("similarity"),
+                    }
+                )
 
-        return reranked
+            logger.info(f"Pre-filtered {len(documents)} docs for {company}")
+
+            # 4. Rerank the filtered results using CrossEncoder
+            reranked = self.rerank_results(query, documents, k)
+
+            return reranked
+
+        except Exception as e:
+            logger.error(f"Error in search_by_company: {str(e)}")
+            import traceback
+
+            traceback.print_exc()
+            # Fallback: 기존 방식 (전체 검색 후 필터링)
+            logger.info(f"Falling back to post-filtering for {company}")
+            results = self.similarity_search(query, k=100)
+            filtered = [
+                doc
+                for doc in results
+                if doc.get("metadata", {}).get("ticker") == company
+            ]
+            if not filtered:
+                logger.warning(f"Fallback also found no documents for {company}.")
+                return []
+            return self.rerank_results(query, filtered, k)
 
     def hybrid_search(
         self,
