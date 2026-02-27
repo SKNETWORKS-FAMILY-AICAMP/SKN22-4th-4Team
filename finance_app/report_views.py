@@ -145,17 +145,17 @@ def _generate_report_sync(resolved_tickers: list, charts_req: dict) -> JsonRespo
         for t in resolved_tickers:
             chart_data = {"ticker": t}
             if charts_req.get("line"):
-                chart_data["line_chart"] = generate_line_chart_plotly(t).to_json()
+                chart_data["line_chart"] = generate_line_chart_plotly([t]).to_json()
             if charts_req.get("candle"):
-                chart_data["candle_chart"] = generate_candlestick_chart_plotly(t).to_json()
+                chart_data["candle_chart"] = generate_candlestick_chart_plotly([t]).to_json()
             if charts_req.get("volume"):
                 try:
-                    chart_data["volume_chart"] = generate_volume_chart_plotly(t).to_json()
+                    chart_data["volume_chart"] = generate_volume_chart_plotly([t]).to_json()
                 except Exception as ve:
                     logger.error(f"Volume chart error for {t}: {ve}")
             if charts_req.get("finance"):
                 try:
-                    chart_data["finance_chart"] = generate_financial_chart_plotly(t).to_json()
+                    chart_data["finance_chart"] = generate_financial_chart_plotly([t]).to_json()
                 except Exception as fe:
                     logger.error(f"Finance chart error for {t}: {fe}")
             charts_plotly_json.append(chart_data)
