@@ -51,3 +51,4 @@ sentence-transformers
 rank_bm25
 tf-keras
 django
+django-allauth[socialaccount]
