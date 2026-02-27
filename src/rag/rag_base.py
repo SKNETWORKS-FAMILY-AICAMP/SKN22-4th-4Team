@@ -165,6 +165,29 @@ class RAGBase:
         else:
             raise RuntimeError("No LLM client available")
 
+    def _llm_chat_stream(self, messages, temperature=None, max_tokens=None):
+        """통합 LLM 채팅 호출 (Streaming)"""
+        if self.llm_client:
+            yield from self.llm_client.chat_completion_stream(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        elif self.openai_client:
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature or 0.1,
+                "max_tokens": max_tokens or 4096,
+                "stream": True,
+            }
+            response = self.openai_client.chat.completions.create(**kwargs)
+            for chunk in response:
+                if chunk.choices and len(chunk.choices) > 0:
+                    yield chunk.choices[0].delta.content or ""
+        else:
+            raise RuntimeError("No LLM client available")
+
     def _load_prompt(self, filename: str) -> str:
         """프롬프트 파일 로드"""
         prompts_dir = Path(__file__).parent.parent / "prompts"

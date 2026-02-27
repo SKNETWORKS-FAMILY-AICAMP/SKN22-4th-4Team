@@ -75,7 +75,7 @@ graph TD
   - `pgvector`: 벡터 임베딩 저장 및 검색
   - `Relational Tables`: 기업 정보, 사용자 정보, 관계 데이터 관리
 - **Neo4j**: 기업 관계망 그래프 DB (614노드, 212관계)
-- **Authentication**: Supabase Auth
+- **Authentication**: Django Auth (SQLite)
 
 ## 🔄 데이터 흐름 (Data Flow)
 
@@ -120,7 +120,7 @@ graph TD
         L --> M{GPT-4.1-mini / Gemini}
         M --> N[입체적 투자 인사이트 답변]
     end
-    end
+
 ```
 
 ### 주요 기능

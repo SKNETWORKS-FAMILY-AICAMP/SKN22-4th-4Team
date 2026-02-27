@@ -93,6 +93,8 @@
         <i class="bi bi-plus-lg"></i>
       </button>
     </div>
+    <!-- Inline Error Message -->
+    <div id="watchlistError" style="display:none; font-size: 0.75rem; color: #ff6b6b; margin-bottom: 4px; transition: opacity 0.3s;"></div>
     <!-- Ticker List -->
     <div
       id="watchlistItems"
@@ -160,6 +162,17 @@
     const countBadge = document.getElementById("watchlistCount");
     const addBtn = document.getElementById("watchlistAddBtn");
     const tickerInput = document.getElementById("watchlistTickerInput");
+    const errorDiv = document.getElementById("watchlistError");
+
+    function showError(msg) {
+      errorDiv.textContent = "⚠ " + msg;
+      errorDiv.style.display = "block";
+      errorDiv.style.opacity = "1";
+      setTimeout(() => {
+        errorDiv.style.opacity = "0";
+        setTimeout(() => { errorDiv.style.display = "none"; }, 300);
+      }, 3000);
+    }
 
     function getCookie(name) {
       let v = null;
@@ -178,12 +191,26 @@
           const tickers = data.tickers || [];
           countBadge.textContent = tickers.length;
           itemsDiv.innerHTML = "";
-          tickers.forEach((t) => {
+          tickers.forEach((item) => {
+            // handle backward compatibility if item is just string
+            const t = typeof item === 'string' ? item : item.ticker;
+            const threshold = typeof item === 'string' ? 5.0 : item.alert_threshold_percent;
+            
             const row = document.createElement("div");
             row.className =
-              "d-flex align-items-center justify-content-between py-1";
+              "d-flex align-items-center justify-content-between py-1 border-bottom border-dark border-opacity-25";
             row.innerHTML = `
-                        <span class="text-primary-accent fw-semibold">${t}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-primary-accent fw-semibold" style="width: 45px;">${t}</span>
+                            <select class="form-select form-select-sm bg-dark text-light border-secondary p-0 ps-1 pe-4" 
+                                    style="font-size: 0.70rem; width: 60px; height: 22px; cursor: pointer;"
+                                    onchange="updateWatchlistAlert('${t}', this.value)"
+                                    title="알림 기준 등락률">
+                                <option value="3.0" ${threshold == 3.0 ? 'selected' : ''}>±3%</option>
+                                <option value="5.0" ${threshold == 5.0 ? 'selected' : ''}>±5%</option>
+                                <option value="10.0" ${threshold == 10.0 ? 'selected' : ''}>±10%</option>
+                            </select>
+                        </div>
                         <button class="btn btn-sm p-0 text-negative border-0 bg-transparent" onclick="removeWatchlist('${t}')" title="삭제">
                             <i class="bi bi-x-circle"></i>
                         </button>`;
@@ -209,6 +236,24 @@
         .then(() => loadWatchlist());
     };
 
+    window.updateWatchlistAlert = function (ticker, alert_threshold) {
+      fetch('{% url "finance_app:watchlist_update_alert" %}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ ticker: ticker, alert_threshold: alert_threshold }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+            if (!data.success) {
+                console.error("Failed to update alert threshold");
+                loadWatchlist();
+            }
+        });
+    };
+
     addBtn.addEventListener("click", () => {
       const ticker = tickerInput.value.trim();
       if (!ticker) return;
@@ -222,6 +267,10 @@
       })
         .then((r) => r.json())
         .then((data) => {
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
           tickerInput.value = "";
           if (data.resolved_from) {
             tickerInput.placeholder = `${data.resolved_from} → ${data.ticker} ✓`;

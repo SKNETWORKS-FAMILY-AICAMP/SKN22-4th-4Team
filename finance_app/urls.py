@@ -32,9 +32,21 @@ urlpatterns = [
     # Watchlist API
     path("api/watchlist/add/", views.watchlist_add, name="watchlist_add"),
     path("api/watchlist/remove/", views.watchlist_remove, name="watchlist_remove"),
+    path(
+        "api/watchlist/update_alert/",
+        views.watchlist_update_alert,
+        name="watchlist_update_alert",
+    ),
     path("api/watchlist/", views.watchlist_list, name="watchlist_list"),
     # Company Search API
     path(
         "api/companies/search/", views.search_companies_api, name="search_companies_api"
+    ),
+    # Notifications API
+    path("api/notifications/", views.get_notifications, name="get_notifications"),
+    path(
+        "api/notifications/read/<int:notif_id>/",
+        views.mark_notification_read,
+        name="mark_notification_read",
     ),
 ]
