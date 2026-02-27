@@ -31,7 +31,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 # 로그 설정
 LOG_DIR = project_root / "data" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -53,61 +52,6 @@ def setup_logging():
 
 
 logger = setup_logging()
-
-MAX_RETRIES = 3
-RETRY_DELAY_BASE = 2
-
-
-def check_and_create_notifications(company_info: Dict):
-    """
-    관심 종목에 등록된 사용자들의 알림 설정 기준에 따라 알림을 생성합니다.
-    """
-    try:
-        from finance_app.models import Watchlist, Notification
-
-        ticker = company_info.get("ticker", "")
-        current_price = company_info.get("current_price", 0)
-        previous_close = company_info.get("previous_close", 0)
-
-        if not current_price or not previous_close or previous_close == 0:
-            return
-
-        # 등락률 계산
-        change_percent = ((current_price - previous_close) / previous_close) * 100
-        abs_change_percent = abs(change_percent)
-
-        # 해당 티커를 관심 종목으로 등록한 모든 레코드 조회 (연관된 User 포함)
-        watchlists = Watchlist.objects.filter(ticker=ticker).select_related("user")
-
-        notifications_to_create = []
-        for watch in watchlists:
-            # 설정한 임계값 이상 변동했을 경우
-            if abs_change_percent >= watch.alert_threshold_percent:
-                direction = "급등" if change_percent > 0 else "급락"
-                title = f"[{ticker}] {direction} 알림 ({change_percent:+.2f}%)"
-                message = (
-                    f"{ticker} 주가가 전일 종가(${previous_close:.2f}) 대비 "
-                    f"{change_percent:+.2f}% 변동하여 현재 ${current_price:.2f} 입니다. "
-                    f"(설정 기준: {watch.alert_threshold_percent:g}%)"
-                )
-
-                notifications_to_create.append(
-                    Notification(
-                        user=watch.user,
-                        ticker=ticker,
-                        title=title,
-                        message=message,
-                        notification_type="price_alert",
-                    )
-                )
-
-        if notifications_to_create:
-            Notification.objects.bulk_create(notifications_to_create)
-            logger.info(f"🔔 {ticker} 알림 {len(notifications_to_create)}건 생성됨")
-
-    except Exception as e:
-        logger.error(f"❌ 알림 생성 중 오류 발생 ({ticker}): {e}")
-
 
 # Slack 알림 기능 제거됨 (User request)
 # SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
@@ -147,7 +91,6 @@ def get_sp500_tickers() -> List[str]:
 def fetch_company_info(ticker: str) -> Optional[Dict]:
     """yfinance로 기업 정보 수집 (단일 시도)"""
     import yfinance as yf
-    import pytz
 
     try:
         stock = yf.Ticker(ticker)
@@ -313,10 +256,6 @@ def collect_sp500_data():
         if info:
             all_data.append(info)
             success_count += 1
-
-            # 알림 조건 확인 및 생성
-            check_and_create_notifications(info)
-
             if i % 50 == 0:  # 50개마다 진행상황 출력
                 logger.info(
                     f"  [{i:3d}/{len(tickers)}] 진행 중... (성공: {success_count})"
@@ -340,10 +279,6 @@ def collect_sp500_data():
             if info:
                 all_data.append(info)
                 retry_success += 1
-
-                # 알림 조건 확인 및 생성
-                check_and_create_notifications(info)
-
                 logger.info(f"  ✅ {ticker}: 재시도 성공")
             else:
                 still_failed.append(ticker)
@@ -508,8 +443,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import django
-
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-    django.setup()
     main()

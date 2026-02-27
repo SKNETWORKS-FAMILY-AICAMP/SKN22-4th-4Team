@@ -58,18 +58,6 @@ def init_scheduler():
             replace_existing=True,
         )
 
-        # 서버 구동 시 누락된 업데이트를 위해 즉시 1회 실행 추가 (현재는 데이터가 수집되어 무시)
-        # from datetime import datetime, timedelta
-        # now = datetime.now(kst)
-        # scheduler.add_job(
-        #     collect_sp500_data,
-        #     trigger="date",
-        #     run_date=now + timedelta(seconds=5),
-        #     id="sp500_startup_collection",
-        #     name="S&P 500 Startup Collection",
-        #     replace_existing=True,
-        # )
-
         # 매일 새벽 6시(KST) 실행 - 뉴스 심리 분석
         scheduler.add_job(
             run_analyze_news_job,
@@ -78,16 +66,6 @@ def init_scheduler():
             name="Daily FinBERT News Sentiment Analysis",
             replace_existing=True,
         )
-
-        # 서버 구동 시 즉시 1회 실행 추가 (데이터 수집 2분 후 실행) - 현재 무시
-        # scheduler.add_job(
-        #     run_analyze_news_job,
-        #     trigger="date",
-        #     run_date=now + timedelta(minutes=2),
-        #     id="analyze_news_startup",
-        #     name="Startup FinBERT News Sentiment Analysis",
-        #     replace_existing=True,
-        # )
 
         scheduler.start()
         _scheduler = scheduler
