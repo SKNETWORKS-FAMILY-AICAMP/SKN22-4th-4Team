@@ -186,3 +186,39 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug_allauth.log',
+        },
+    },
+    'loggers': {
+        'allauth': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'request': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# Social Account Provider specific settings
+SOCIALACCOUNT_PROVIDERS['kakao']['SCOPE'] = ['profile_nickname', 'account_email']
+SOCIALACCOUNT_PROVIDERS['google']['SCOPE'] = ['profile', 'email']
+SOCIALACCOUNT_PROVIDERS['naver']['SCOPE'] = ['name', 'email']
+SOCIALACCOUNT_PROVIDERS['github']['SCOPE'] = ['user:email', 'read:user']
+
+# To populate user models from provider
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
