@@ -103,20 +103,20 @@ def generate_charts_for_ticker_task(ticker: str, charts_req: dict) -> dict:
         chart_data = {"ticker": ticker}
 
         if charts_req.get("line"):
-            chart_data["line_chart"] = generate_line_chart_plotly(ticker).to_json()
+            chart_data["line_chart"] = generate_line_chart_plotly([ticker]).to_json()
 
         if charts_req.get("candle"):
-            chart_data["candle_chart"] = generate_candlestick_chart_plotly(ticker).to_json()
+            chart_data["candle_chart"] = generate_candlestick_chart_plotly([ticker]).to_json()
 
         if charts_req.get("volume"):
             try:
-                chart_data["volume_chart"] = generate_volume_chart_plotly(ticker).to_json()
+                chart_data["volume_chart"] = generate_volume_chart_plotly([ticker]).to_json()
             except Exception as ve:
                 logger.warning(f"Volume chart 생성 실패 ({ticker}): {ve}")
 
         if charts_req.get("finance"):
             try:
-                chart_data["finance_chart"] = generate_financial_chart_plotly(ticker).to_json()
+                chart_data["finance_chart"] = generate_financial_chart_plotly([ticker]).to_json()
             except Exception as fe:
                 logger.warning(f"Finance chart 생성 실패 ({ticker}): {fe}")
 
@@ -182,17 +182,17 @@ def orchestrate_report_pipeline(self, tickers: list, charts_req: dict) -> dict:
             chart_data = {"ticker": ticker}
             try:
                 if charts_req.get("line"):
-                    chart_data["line_chart"] = generate_line_chart_plotly(ticker).to_json()
+                    chart_data["line_chart"] = generate_line_chart_plotly([ticker]).to_json()
                 if charts_req.get("candle"):
-                    chart_data["candle_chart"] = generate_candlestick_chart_plotly(ticker).to_json()
+                    chart_data["candle_chart"] = generate_candlestick_chart_plotly([ticker]).to_json()
                 if charts_req.get("volume"):
                     try:
-                        chart_data["volume_chart"] = generate_volume_chart_plotly(ticker).to_json()
+                        chart_data["volume_chart"] = generate_volume_chart_plotly([ticker]).to_json()
                     except Exception:
                         pass
                 if charts_req.get("finance"):
                     try:
-                        chart_data["finance_chart"] = generate_financial_chart_plotly(ticker).to_json()
+                        chart_data["finance_chart"] = generate_financial_chart_plotly([ticker]).to_json()
                     except Exception:
                         pass
             except Exception as e:
