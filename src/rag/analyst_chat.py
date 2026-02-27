@@ -291,11 +291,69 @@ class AnalystChatbot(RAGBase):
 
     def _extract_tickers(self, query: str) -> List[str]:
         """Extract company tickers from user query using LLM"""
+        # Pre-LLM: 한글 기업명을 먼저 직접 매핑 (LLM 환각 방지)
+        try:
+            from src.utils.ticker_resolver import COMPANY_MAP
+        except ImportError:
+            from utils.ticker_resolver import COMPANY_MAP
+
+        pre_resolved = []
+        remaining_query = query
+        for name, ticker in COMPANY_MAP.items():
+            if name in query.lower() and ticker not in pre_resolved:
+                pre_resolved.append(ticker)
+
+        # 매핑으로 모든 기업을 찾았으면 LLM 호출 생략
+        if pre_resolved:
+            logger.info(f"Pre-resolved tickers from COMPANY_MAP: {pre_resolved}")
+            # 추가 기업이 있을 수 있으니 LLM도 호출하되, pre_resolved를 먼저 반환
+            try:
+                messages = [
+                    {
+                        "role": "system",
+                        "content": "Extract ALL company ticker symbols mentioned in the query. You MUST return every single ticker found, comma-separated. Map Korean company names to their correct US stock ticker symbols. Examples: 애플->AAPL, 마이크로소프트->MSFT, 코카콜라->KO, 펩시->PEP, 펩시코->PEP, 테슬라->TSLA, 엔비디아->NVDA, 구글->GOOGL, 아마존->AMZN, 메타->META, 알파벳->GOOGL, 보잉->BA, 넷플릭스->NFLX, 세일즈포스->CRM, 일라이릴리->LLY, 버크셔해서웨이->BRK-B. Example output for '코카콜라와 펩시 비교해줘': KO,PEP. Example output for '애플 실적 알려줘': AAPL. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If no company is mentioned, return NOTHING.",
+                    },
+                    {"role": "user", "content": query},
+                ]
+                content = self._llm_chat(messages, temperature=0.0, max_tokens=30) or ""
+                if content and "NOTHING" not in content:
+                    llm_tickers = [
+                        t.strip()
+                        .replace(".", "")
+                        .replace("'", "")
+                        .replace('"', "")
+                        .upper()
+                        for t in content.split(",")
+                        if t.strip()
+                    ]
+                    # LLM이 하이픈 없이 추출하는 경우 교정 (BRKA→BRK-A, BRKB→BRK-B, BFB→BF-B)
+                    TICKER_ALIASES = {
+                        "BRKA": "BRK-A",
+                        "BRKB": "BRK-B",
+                        "BRK.B": "BRK-B",
+                        "BRK.A": "BRK-A",
+                        "BFB": "BF-B",
+                        "BFA": "BF-A",
+                    }
+                    for t in llm_tickers:
+                        t = TICKER_ALIASES.get(t, t)  # 별칭 교정
+                        if (
+                            len(t) <= 6
+                            and t.replace("-", "").isalpha()
+                            and t.isascii()
+                            and t not in pre_resolved
+                        ):
+                            pre_resolved.append(t)
+            except Exception:
+                pass
+            return pre_resolved
+
+        # 매핑 없으면 기존 LLM 방식
         try:
             messages = [
                 {
                     "role": "system",
-                    "content": "Extract ALL company ticker symbols mentioned in the query. You MUST return every single ticker found, comma-separated. Map Korean company names to their correct US stock ticker symbols. Examples: 애플->AAPL, 마이크로소프트->MSFT, 코카콜라->KO, 펩시->PEP, 펩시코->PEP, 테슬라->TSLA, 엔비디아->NVDA, 구글->GOOGL, 아마존->AMZN, 메타->META. Example output for '코카콜라와 펩시 비교해줘': KO,PEP. Example output for '애플 실적 알려줘': AAPL. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If no company is mentioned, return NOTHING.",
+                    "content": "Extract ALL company ticker symbols mentioned in the query. You MUST return every single ticker found, comma-separated. Map Korean company names to their correct US stock ticker symbols. Examples: 애플->AAPL, 마이크로소프트->MSFT, 코카콜라->KO, 펩시->PEP, 펩시코->PEP, 테슬라->TSLA, 엔비디아->NVDA, 구글->GOOGL, 아마존->AMZN, 메타->META, 알파벳->GOOGL, 보잉->BA, 넷플릭스->NFLX, 세일즈포스->CRM, 일라이릴리->LLY. Example output for '코카콜라와 펩시 비교해줘': KO,PEP. Example output for '애플 실적 알려줘': AAPL. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If no company is mentioned, return NOTHING.",
                 },
                 {"role": "user", "content": query},
             ]
@@ -313,7 +371,7 @@ class AnalystChatbot(RAGBase):
             valid_tickers = []
             if self.finnhub:
                 for t in tickers:
-                    if len(t) <= 5:
+                    if len(t) <= 5 and t.isalpha() and t.isascii():
                         valid_tickers.append(t)
 
             return valid_tickers
