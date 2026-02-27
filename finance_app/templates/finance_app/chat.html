@@ -154,6 +154,12 @@
         color: white;
     }
 
+    /* Light mode override for chat input */
+    [data-theme="light"] .chat-input-container input,
+    [data-theme="light"] .chat-input-container input:focus {
+        color: #212529 !important;
+    }
+
     .chat-input-container .btn-send {
         border-radius: 50%;
         width: 40px;
@@ -182,6 +188,7 @@
         animation: typing 1.4s infinite ease-in-out both;
         opacity: 0.6;
     }
+
     .typing-indicator span:nth-child(1) {
         animation-delay: -0.32s;
     }
@@ -219,7 +226,7 @@
     .js-plotly-plot .plotly text {
         fill: #ffffff !important;
     }
-    
+
     /* Recommendations Chips List */
     .rec-chips-container {
         display: flex;
@@ -229,7 +236,7 @@
         padding-top: 1rem;
         border-top: 1px solid var(--border-color);
     }
-    
+
     .rec-chip {
         display: inline-flex;
         align-items: center;
@@ -242,7 +249,7 @@
         text-decoration: none;
         transition: all 0.2s ease;
     }
-    
+
     .rec-chip:hover {
         background-color: var(--accent-blue);
         color: white;
@@ -495,7 +502,7 @@
                 appendBotMessage(`**서버 오류가 발생했습니다.**\n\n서버가 올바른 응답을 반환하지 않았습니다. (HTTP ${response.status})`);
                 return;
             }
-            
+
             if (response.ok && data.success) {
                 const content = data.content || '(응답 내용이 비어 있습니다.)';
                 appendBotMessage(content, data.chart_data, data.recommendations);

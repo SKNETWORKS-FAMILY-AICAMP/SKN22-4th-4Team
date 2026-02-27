@@ -50,7 +50,7 @@
             <form action="{% provider_login_url 'google' %}" method="post" class="m-0">
                 {% csrf_token %}
                 <button type="submit"
-                    class="btn btn-outline-light rounded-circle d-flex justify-content-center align-items-center"
+                    class="btn btn-outline-light rounded-circle d-flex justify-content-center align-items-center social-btn-outline"
                     style="width: 45px; height: 45px; padding: 0;" title="Google">
                     <i class="bi bi-google fs-5"></i>
                 </button>
@@ -58,7 +58,7 @@
             <form action="{% provider_login_url 'github' %}" method="post" class="m-0">
                 {% csrf_token %}
                 <button type="submit"
-                    class="btn btn-outline-light rounded-circle d-flex justify-content-center align-items-center"
+                    class="btn btn-outline-light rounded-circle d-flex justify-content-center align-items-center social-btn-outline"
                     style="width: 45px; height: 45px; padding: 0;" title="GitHub">
                     <i class="bi bi-github fs-5"></i>
                 </button>
@@ -126,6 +126,17 @@
         display: inline-block;
         width: 1em;
         margin-left: -1em;
+    }
+
+    /* Light mode overrides for social buttons */
+    [data-theme="light"] .social-btn-outline {
+        color: #212529 !important;
+        border-color: #212529 !important;
+    }
+
+    [data-theme="light"] .social-btn-outline:hover {
+        background-color: #f8f9fa !important;
+        color: #000 !important;
     }
 </style>
 {% endblock %}
