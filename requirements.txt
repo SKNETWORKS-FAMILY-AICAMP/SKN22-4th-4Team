@@ -1,8 +1,7 @@
 # Core Framework
-streamlit>=1.31.0
+django>=5.0.0
+django-allauth[socialaccount]
 python-dotenv>=1.0.0
-extra-streamlit-components>=0.1.70
-streamlit-javascript>=0.1.5
 
 # LLM & AI
 openai>=1.12.0
@@ -12,6 +11,10 @@ langchain-community>=0.0.24
 langchain-openai>=0.0.6
 langchain-google-genai>=2.1.0
 langsmith>=0.1.0
+
+# NLP & FinBERT
+transformers>=4.35.0
+torch>=2.0.0
 mcp>=1.0.0
 
 # Graph
@@ -40,7 +43,6 @@ pytz>=2024.1
 APScheduler>=3.10.0
 lxml>=5.1.0
 tavily-python>=0.3.0
-streamlit-searchbox>=0.1.7
 pypdf>=4.0.0
 
 # Evaluation & RAG Advanced
@@ -50,8 +52,6 @@ rapidfuzz
 sentence-transformers
 rank_bm25
 tf-keras
-django
-django-allauth[socialaccount]
 
 # Async Task Queue
 celery>=5.3.0
