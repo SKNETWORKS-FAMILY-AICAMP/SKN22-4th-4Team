@@ -247,36 +247,32 @@ def chat_api(request):
         session_id = request.session.get("chat_session_id", str(uuid.uuid4())[:16])
         request.session["chat_session_id"] = session_id  # 확실히 저장
 
-        from src.core.chat_connector import ChatRequest
+        from django.http import StreamingHttpResponse
 
-        # 커넥터 가져오기 및 메시지 처리
-        connector = get_chat_connector(strict_mode=False)
-        chat_request = ChatRequest(
-            session_id=session_id,
-            message=message,
-            ticker=None,
-            use_rag=True,
-        )
+        def event_stream():
+            try:
+                # 커넥터 가져오기 및 메시지 처리
+                connector = get_chat_connector(strict_mode=False)
+                chat_request = ChatRequest(
+                    session_id=session_id,
+                    message=message,
+                    ticker=None,
+                    use_rag=True,
+                )
 
-        response = connector.process_message(chat_request)
+                stream_gen = connector.process_message_stream(chat_request)
+                for item in stream_gen:
+                    # SSE format: data: JSON_STRING\n\n
+                    data_str = json.dumps(item)
+                    yield f"data: {data_str}\n\n"
+            except Exception as e:
+                error_data = json.dumps({"type": "error", "content": f"스트림 오류: {str(e)}"})
+                yield f"data: {error_data}\n\n"
 
-        if response.success:
-            return JsonResponse(
-                {
-                    "success": True,
-                    "content": response.content,
-                    "chart_data": response.chart_data,
-                    "recommendations": response.recommendations,
-                }
-            )
-        else:
-            return JsonResponse(
-                {
-                    "success": False,
-                    "content": response.content,
-                    "error_code": response.error_code,
-                }
-            )
+        response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no' # For Nginx
+        return response
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "잘못된 JSON 형식입니다."}, status=400)
