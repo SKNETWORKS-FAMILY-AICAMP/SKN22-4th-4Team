@@ -295,7 +295,7 @@ class AnalystChatbot(RAGBase):
             messages = [
                 {
                     "role": "system",
-                    "content": "Extract all company ticker symbols from the query. Map Korean company names to their correct US stock ticker symbols (e.g., 애플->AAPL, 마이크로소프트->MSFT, 코카콜라->KO, 펩시->PEP, 펩시코->PEP). Return them comma-separated. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If none, return NOTHING.",
+                    "content": "Extract ALL company ticker symbols mentioned in the query. You MUST return every single ticker found, comma-separated. Map Korean company names to their correct US stock ticker symbols. Examples: 애플->AAPL, 마이크로소프트->MSFT, 코카콜라->KO, 펩시->PEP, 펩시코->PEP, 테슬라->TSLA, 엔비디아->NVDA, 구글->GOOGL, 아마존->AMZN, 메타->META. Example output for '코카콜라와 펩시 비교해줘': KO,PEP. Example output for '애플 실적 알려줘': AAPL. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If no company is mentioned, return NOTHING.",
                 },
                 {"role": "user", "content": query},
             ]
@@ -480,6 +480,12 @@ class AnalystChatbot(RAGBase):
             user_content = (
                 f"[컨텍스트]\n{context}\n\n[질문]\n{message}" if context else message
             )
+            # 멀티 티커일 때 비교 분석 명시 지시
+            if len(tickers) > 1 and context:
+                compare_hint = f"\n\n[중요 지시] 사용자가 여러 기업({', '.join(tickers)})을 언급했습니다. 각 기업의 뉴스 감정 분석과 재무 데이터를 모두 포함하여 비교 분석해주세요."
+                user_content = (
+                    f"[컨텍스트]\n{context}{compare_hint}\n\n[질문]\n{message}"
+                )
             messages.append({"role": "user", "content": user_content})
 
             # 3. LLM 호출 (1차: 도구 사용 여부 결정)
@@ -626,6 +632,8 @@ class AnalystChatbot(RAGBase):
                 tickers = [resolved] if resolved else [ticker]
             else:
                 tickers = self._extract_tickers(message)
+                if tickers:
+                    logger.info(f"[Stream] Auto-extracted tickers: {tickers}")
 
             messages = [{"role": "system", "content": self.system_prompt}]
             messages.extend(self.conversation_history[-6:])
@@ -635,7 +643,15 @@ class AnalystChatbot(RAGBase):
                 context_parts = [self._build_context(message, t) for t in tickers]
                 context = "\n\n---\n\n".join(context_parts)
 
-            user_content = f"[컨텍스트]\n{context}\n\n[질문]\n{message}" if context else message
+            # 멀티 티커일 때 비교 분석 명시 지시
+            compare_hint = ""
+            if len(tickers) > 1:
+                compare_hint = f"\n\n[중요 지시] 사용자가 여러 기업({', '.join(tickers)})을 언급했습니다. 각 기업의 뉴스 감정 분석과 재무 데이터를 모두 포함하여 비교 분석해주세요."
+            user_content = (
+                f"[컨텍스트]\n{context}{compare_hint}\n\n[질문]\n{message}"
+                if context
+                else message
+            )
             messages.append({"role": "user", "content": user_content})
 
             if self.llm_client:
@@ -643,7 +659,7 @@ class AnalystChatbot(RAGBase):
                     messages=messages,
                     tools=tools,
                     max_tokens=2000,
-                    json_mode=True, # We still use json_mode for the FIRST call to determine tool use.
+                    json_mode=True,  # We still use json_mode for the FIRST call to determine tool use.
                 )
             else:
                 response = self.openai_client.chat.completions.create(
@@ -658,8 +674,16 @@ class AnalystChatbot(RAGBase):
                 llm_result = {
                     "content": resp_msg.content,
                     "tool_calls": (
-                        [{"name": tc.function.name, "arguments": json.loads(tc.function.arguments), "id": tc.id} for tc in resp_msg.tool_calls]
-                        if resp_msg.tool_calls else None
+                        [
+                            {
+                                "name": tc.function.name,
+                                "arguments": json.loads(tc.function.arguments),
+                                "id": tc.id,
+                            }
+                            for tc in resp_msg.tool_calls
+                        ]
+                        if resp_msg.tool_calls
+                        else None
                     ),
                 }
 
@@ -667,36 +691,46 @@ class AnalystChatbot(RAGBase):
             chart_data = []
 
             if tool_calls:
-                assistant_msg = {"role": "assistant", "content": llm_result.get("content") or ""}
-                
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": llm_result.get("content") or "",
+                }
+
                 # Append tool_calls property for OpenAI compatibility
                 if not self.llm_client or self.llm_client.provider != "gemini":
                     assistant_msg["tool_calls"] = [
                         {
-                            "type": "function", 
-                            "id": tc.get("id", f"call_{i}"), 
-                            "function": {"name": tc.get("name"), "arguments": json.dumps(tc.get("arguments"))}
-                        } 
+                            "type": "function",
+                            "id": tc.get("id", f"call_{i}"),
+                            "function": {
+                                "name": tc.get("name"),
+                                "arguments": json.dumps(tc.get("arguments")),
+                            },
+                        }
                         for i, tc in enumerate(tool_calls)
                     ]
-                
+
                 messages.append(assistant_msg)
 
                 for i, tc in enumerate(tool_calls):
                     result = self.tool_executor.execute(tc)
-                    
+
                     if self.llm_client and self.llm_client.provider == "gemini":
-                        messages.append({
-                            "role": "user",
-                            "content": f"[Tool Result: {tc['name']}]\n{result}"
-                        })
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": f"[Tool Result: {tc['name']}]\n{result}",
+                            }
+                        )
                     else:
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tc.get("id", f"call_{i}"),
-                            "name": tc["name"],
-                            "content": result
-                        })
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tc.get("id", f"call_{i}"),
+                                "name": tc["name"],
+                                "content": result,
+                            }
+                        )
 
                     if tc["name"] == "get_stock_candles":
                         try:
@@ -717,7 +751,12 @@ class AnalystChatbot(RAGBase):
             # We enforce the output to not be JSON for streaming to easily yield text chunks.
             # We instruct the model to just write markdown text.
             stream_messages = messages.copy()
-            stream_messages.append({"role": "system", "content": "IMPORTANT: Do NOT output JSON. Write your answer in markdown text. Do NOT include 'recommendations' block as JSON. Let your final text naturally conclude."})
+            stream_messages.append(
+                {
+                    "role": "system",
+                    "content": "IMPORTANT: Do NOT output JSON. Write your answer in markdown text. Do NOT include 'recommendations' block as JSON. Let your final text naturally conclude.",
+                }
+            )
 
             full_content = ""
             try:
@@ -733,7 +772,12 @@ class AnalystChatbot(RAGBase):
 
             # Generate recommendations dynamically using a separate fast call
             try:
-                rec_messages = [{"role": "system", "content": "Generate 3 short recommended follow-up questions in Korean based on the previous response. Output in JSON: {\"recommendations\": [\"Q1\", \"Q2\", \"Q3\"]}"}]
+                rec_messages = [
+                    {
+                        "role": "system",
+                        "content": 'Generate 3 short recommended follow-up questions in Korean based on the previous response. Output in JSON: {"recommendations": ["Q1", "Q2", "Q3"]}',
+                    }
+                ]
                 rec_messages.append({"role": "user", "content": full_content})
                 rec_res = self._llm_chat(rec_messages, json_mode=True, max_tokens=200)
                 rec_json = json.loads(rec_res)
@@ -744,16 +788,20 @@ class AnalystChatbot(RAGBase):
                 pass
 
             # Report handling - we generate reports asynchronously or statically, but stream the link
-            report_data, report_type = self._process_report_request(message, full_content, tickers)
+            report_data, report_type = self._process_report_request(
+                message, full_content, tickers
+            )
             if report_data:
                 msg_append = f"\n\n(요청하신 분석 보고서를 {report_type.upper()}로 생성했습니다. 하단 버튼으로 다운로드하세요.)"
                 full_content += msg_append
                 yield {"type": "chunk", "content": msg_append}
                 # To actually send pdf_bytes through SSE is not ideal, we should skip PDF creation in stream and rely on the standalone report generator download endpoint,
                 # BUT since it returns bytes, we can omit sending the bytes in the SSE stream itself, just let the User know they can use the report generation UI.
-                
+
             self.conversation_history.append({"role": "user", "content": message})
-            self.conversation_history.append({"role": "assistant", "content": full_content})
+            self.conversation_history.append(
+                {"role": "assistant", "content": full_content}
+            )
             yield {"type": "done"}
 
         except Exception as e:

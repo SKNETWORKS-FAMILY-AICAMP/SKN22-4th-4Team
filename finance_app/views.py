@@ -15,6 +15,8 @@ from django.urls import reverse_lazy
 from django.views import generic
 from django.views.decorators.csrf import csrf_exempt
 
+from .models import Notification
+
 # Add project root to sys.path so we can import src
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
@@ -264,12 +266,16 @@ def chat_api(request):
                     data_str = json.dumps(item)
                     yield f"data: {data_str}\n\n"
             except Exception as e:
-                error_data = json.dumps({"type": "error", "content": f"스트림 오류: {str(e)}"})
+                error_data = json.dumps(
+                    {"type": "error", "content": f"스트림 오류: {str(e)}"}
+                )
                 yield f"data: {error_data}\n\n"
 
-        response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
-        response['Cache-Control'] = 'no-cache'
-        response['X-Accel-Buffering'] = 'no' # For Nginx
+        response = StreamingHttpResponse(
+            event_stream(), content_type="text/event-stream"
+        )
+        response["Cache-Control"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"  # For Nginx
         return response
 
     except json.JSONDecodeError:
@@ -392,6 +398,7 @@ class SignUpView(generic.CreateView):
 # ─── Watchlist API ────────────────────────────────────────────────────
 
 
+@csrf_exempt
 @login_required
 def watchlist_add(request):
     """관심 기업 추가 API (POST)"""
@@ -428,6 +435,7 @@ def watchlist_add(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@csrf_exempt
 @login_required
 def watchlist_remove(request):
     """관심 기업 삭제 API (POST)"""
@@ -435,8 +443,16 @@ def watchlist_remove(request):
         return JsonResponse({"error": "POST only"}, status=405)
     try:
         data = json.loads(request.body)
-        ticker = data.get("ticker", "").strip().upper()
-        deleted, _ = Watchlist.objects.filter(user=request.user, ticker=ticker).delete()
+        ticker = data.get("ticker", "").strip()
+        # 대소문자 무관 삭제 (DB에 어떤 형태로 저장됐든 삭제 가능)
+        deleted, _ = Watchlist.objects.filter(
+            user=request.user, ticker__iexact=ticker
+        ).delete()
+        if not deleted:
+            # 정확한 값으로도 시도
+            deleted, _ = Watchlist.objects.filter(
+                user=request.user, ticker=ticker
+            ).delete()
         return JsonResponse({"success": True, "deleted": deleted > 0, "ticker": ticker})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

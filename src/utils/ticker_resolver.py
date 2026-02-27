@@ -46,16 +46,9 @@ def resolve_to_ticker(term: str) -> tuple[str, str | None]:
     """
     term = term.strip()
 
-    # 1. 이미 티커 형식이면 먼저 yfinance로 검증
+    # 1. 이미 티커 형식이면 반환
     if term.isupper() and term.isalpha() and len(term) <= 5:
-        try:
-            import yfinance as yf
-
-            stock = yf.Ticker(term)
-            if stock.fast_info and "previousClose" in stock.fast_info:
-                return term, None
-        except Exception:
-            pass
+        return term, None
 
     # 2. 매핑 테이블에서 검색
     lower_term = term.lower()
@@ -73,47 +66,29 @@ def resolve_to_ticker(term: str) -> tuple[str, str | None]:
     except Exception:
         pass
 
-    # 4. Web Search Fallback (Tavily) — 영문 입력만 시도 (한글은 이미 매핑/DB에서 처리됨)
+    # 4. Web Search Fallback (Tavily)
     try:
         from src.utils.ticker_search_agent import find_ticker_from_web
 
-        # 한글(비-ASCII) 입력은 매핑과 DB에서 못 찾은 경우 웹 검색 생략 (속도 최적화)
-        if len(term) < 20 and term.isascii():
+        # 너무 긴 텍스트는 검색 제외
+        if len(term) < 20:
             found_ticker, reason = find_ticker_from_web(term)
+            # 웹 검색 결과도 유효한 티커 형식인지 검증 (영문 1~5자리만 허용)
             if (
-                found_ticker != "UNKNOWN"
+                found_ticker
+                and found_ticker != "UNKNOWN"
                 and found_ticker.isalpha()
                 and found_ticker.isascii()
-                and len(found_ticker) <= 5
+                and 1 <= len(found_ticker) <= 5
             ):
-                try:
-                    import yfinance as yf
-
-                    stock = yf.Ticker(found_ticker)
-                    hist = stock.history(period="1d")
-                    if not hist.empty:
-                        return found_ticker, reason
-                except Exception:
-                    pass
+                return found_ticker.upper(), reason
     except Exception as e:
         print(f"Web search failed: {e}")
 
-    # 실패 시 대문자로 변환하여 티커로 가정하되, yfinance로 실제 존재하는지 마지막 검증
-    assumed_ticker = term.upper()
-    if (
-        assumed_ticker.isalpha()
-        and assumed_ticker.isascii()
-        and len(assumed_ticker) <= 5
-    ):
-        try:
-            import yfinance as yf
+    # 실패 시: 영문(ASCII) 대문자 1~5자리라면 티커로 가정
+    upper_term = term.upper()
+    if upper_term.isascii() and upper_term.isalpha() and 1 <= len(upper_term) <= 5:
+        return upper_term, None
 
-            stock = yf.Ticker(assumed_ticker)
-            hist = stock.history(period="1d")
-            if not hist.empty:
-                return assumed_ticker, None
-        except Exception:
-            pass
-
-    # 검증 실패 시 None 반환
-    return None, "유효하지 않은 기업명 또는 티커입니다."
+    # 유효하지 않은 입력은 거부
+    return None, f"'{term}'에 해당하는 기업을 찾을 수 없습니다."
