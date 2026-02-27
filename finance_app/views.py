@@ -181,8 +181,8 @@ def home(request):
         "db_companies_sample": results["db_companies_sample"],
     }
 
-    # 3. 데이터 캐싱 (600초 = 10분)
-    cache.set(cache_key, context, 600)
+    # 3. 데이터 캐싱 (무기한)
+    cache.set(cache_key, context, None)
 
     return render(request, "finance_app/home.html", context)
 
