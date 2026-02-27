@@ -93,6 +93,8 @@
         <i class="bi bi-plus-lg"></i>
       </button>
     </div>
+    <!-- Error Message -->
+    <div id="watchlistError" class="text-danger mt-1" style="font-size: 0.75rem; display: none;"></div>
     <!-- Ticker List -->
     <div
       id="watchlistItems"
@@ -160,6 +162,13 @@
     const countBadge = document.getElementById("watchlistCount");
     const addBtn = document.getElementById("watchlistAddBtn");
     const tickerInput = document.getElementById("watchlistTickerInput");
+    const errorDiv = document.getElementById("watchlistError");
+
+    function showError(msg) {
+      errorDiv.textContent = `❌ ${msg}`;
+      errorDiv.style.display = 'block';
+      setTimeout(() => { errorDiv.style.display = 'none'; }, 4000);
+    }
 
     function getCookie(name) {
       let v = null;
@@ -179,12 +188,13 @@
           countBadge.textContent = tickers.length;
           itemsDiv.innerHTML = "";
           tickers.forEach((t) => {
+            const tickerName = typeof t === 'string' ? t : t.ticker;
             const row = document.createElement("div");
             row.className =
               "d-flex align-items-center justify-content-between py-1";
             row.innerHTML = `
-                        <span class="text-primary-accent fw-semibold">${t}</span>
-                        <button class="btn btn-sm p-0 text-negative border-0 bg-transparent" onclick="removeWatchlist('${t}')" title="삭제">
+                        <span class="text-primary-accent fw-semibold">${tickerName}</span>
+                        <button class="btn btn-sm p-0 text-negative border-0 bg-transparent" onclick="removeWatchlist('${tickerName}')" title="삭제">
                             <i class="bi bi-x-circle"></i>
                         </button>`;
             itemsDiv.appendChild(row);
@@ -222,6 +232,10 @@
       })
         .then((r) => r.json())
         .then((data) => {
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
           tickerInput.value = "";
           if (data.resolved_from) {
             tickerInput.placeholder = `${data.resolved_from} → ${data.ticker} ✓`;
@@ -230,6 +244,9 @@
             }, 2500);
           }
           loadWatchlist();
+        })
+        .catch((err) => {
+          showError("네트워크 오류");
         });
     });
 

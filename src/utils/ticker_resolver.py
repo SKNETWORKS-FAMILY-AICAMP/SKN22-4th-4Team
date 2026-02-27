@@ -73,10 +73,22 @@ def resolve_to_ticker(term: str) -> tuple[str, str | None]:
         # 너무 긴 텍스트는 검색 제외
         if len(term) < 20:
             found_ticker, reason = find_ticker_from_web(term)
-            if found_ticker != "UNKNOWN":
-                return found_ticker, reason
+            # 웹 검색 결과도 유효한 티커 형식인지 검증 (영문 1~5자리만 허용)
+            if (
+                found_ticker
+                and found_ticker != "UNKNOWN"
+                and found_ticker.isalpha()
+                and found_ticker.isascii()
+                and 1 <= len(found_ticker) <= 5
+            ):
+                return found_ticker.upper(), reason
     except Exception as e:
         print(f"Web search failed: {e}")
 
-    # 실패 시 대문자로 변환하여 티커로 가정하고 반환
-    return term.upper(), None
+    # 실패 시: 영문(ASCII) 대문자 1~5자리라면 티커로 가정
+    upper_term = term.upper()
+    if upper_term.isascii() and upper_term.isalpha() and 1 <= len(upper_term) <= 5:
+        return upper_term, None
+
+    # 유효하지 않은 입력은 거부
+    return None, f"'{term}'에 해당하는 기업을 찾을 수 없습니다."

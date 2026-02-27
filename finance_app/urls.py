@@ -26,6 +26,12 @@ urlpatterns = [
         name="generate_report_api",
     ),
     path(
+        "api/report/task/<str:task_id>/status/",
+        report_views.report_task_status,
+        name="report_task_status",
+    ),
+
+    path(
         "report/download/pdf/",
         report_views.download_report_pdf,
         name="download_report_pdf",
@@ -37,5 +43,12 @@ urlpatterns = [
     # Company Search API
     path(
         "api/companies/search/", views.search_companies_api, name="search_companies_api"
+    ),
+    # Notification API
+    path("api/notifications/", views.get_notifications, name="get_notifications"),
+    path(
+        "api/notifications/read/<int:notif_id>/",
+        views.mark_notification_read,
+        name="mark_notification_read",
     ),
 ]

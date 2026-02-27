@@ -152,16 +152,43 @@ class RAGBase:
             return result or ""
         elif self.openai_client:
             # OpenAI 폴백
+            _restricted = {"gpt-5-nano", "o1-mini", "o1-preview", "o1", "o3-mini"}
             kwargs = {
                 "model": self.model,
                 "messages": messages,
-                "temperature": temperature or 0.1,
-                "max_tokens": max_tokens or 4096,
             }
+            if self.model not in _restricted:
+                kwargs["temperature"] = temperature or 0.1
+                kwargs["max_completion_tokens"] = max_tokens or 4096
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
             response = self.openai_client.chat.completions.create(**kwargs)
             return response.choices[0].message.content or ""
+        else:
+            raise RuntimeError("No LLM client available")
+
+    def _llm_chat_stream(self, messages, temperature=None, max_tokens=None):
+        """통합 LLM 채팅 호출 (Streaming)"""
+        if self.llm_client:
+            yield from self.llm_client.chat_completion_stream(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        elif self.openai_client:
+            _restricted = {"gpt-5-nano", "o1-mini", "o1-preview", "o1", "o3-mini"}
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "stream": True,
+            }
+            if self.model not in _restricted:
+                kwargs["temperature"] = temperature or 0.1
+                kwargs["max_completion_tokens"] = max_tokens or 4096
+            response = self.openai_client.chat.completions.create(**kwargs)
+            for chunk in response:
+                if chunk.choices and len(chunk.choices) > 0:
+                    yield chunk.choices[0].delta.content or ""
         else:
             raise RuntimeError("No LLM client available")
 

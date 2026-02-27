@@ -75,6 +75,20 @@ class LLMClient:
             raise ValueError("OPENAI_API_KEY 환경 변수가 필요합니다.")
         self.client = OpenAI(api_key=api_key)
 
+    # temperature / max_completion_tokens를 지원하지 않는 모델 목록
+    _RESTRICTED_MODELS = {"gpt-5-nano", "o1-mini", "o1-preview", "o1", "o3-mini"}
+
+    def _sanitize_openai_kwargs(self, kwargs: dict) -> dict:
+        """
+        모델 호환성을 고려하여 API kwargs를 정리합니다.
+        - gpt-5-nano, o1 계열 등은 temperature / max_completion_tokens 미지원
+        """
+        model = kwargs.get("model", self.model)
+        if model in self._RESTRICTED_MODELS:
+            kwargs.pop("temperature", None)
+            kwargs.pop("max_completion_tokens", None)
+        return kwargs
+
     @traceable(run_type="llm", name="chat_completion")
     def chat_completion(
         self,
@@ -170,14 +184,82 @@ class LLMClient:
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
         }
 
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
+        kwargs = self._sanitize_openai_kwargs(kwargs)
         response = self.client.chat.completions.create(**kwargs)
         return response.choices[0].message.content or ""
+
+    @traceable(run_type="llm", name="chat_completion_stream")
+    def chat_completion_stream(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ):
+        """Streaming chat completion (json_mode is forced false)"""
+        temp = temperature if temperature is not None else self.temperature
+        max_tok = max_tokens or self.max_tokens
+
+        if self.provider == "gemini":
+            return self._gemini_chat_stream(messages, temp, max_tok)
+        else:
+            return self._openai_chat_stream(messages, temp, max_tok)
+
+    def _gemini_chat_stream(self, messages: List[Dict[str, str]], temperature: float, max_tokens: int):
+        from google.genai import types
+
+        system_instruction = None
+        contents = []
+
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+
+            if role == "system":
+                system_instruction = content
+            elif role == "assistant":
+                contents.append(types.Content(role="model", parts=[types.Part.from_text(text=content)]))
+            else:
+                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=content)]))
+
+        config_kwargs = {
+            "temperature": temperature,
+            "max_output_tokens": max_tokens,
+        }
+        if system_instruction:
+            config_kwargs["system_instruction"] = system_instruction
+            
+        config = types.GenerateContentConfig(**config_kwargs)
+
+        response_stream = self.client.models.generate_content_stream(
+            model=self.model,
+            contents=contents,
+            config=config,
+        )
+        for chunk in response_stream:
+            if chunk.text:
+                yield chunk.text
+
+    def _openai_chat_stream(self, messages: List[Dict[str, str]], temperature: float, max_tokens: int):
+        kwargs = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_completion_tokens": max_tokens,
+            "stream": True,
+        }
+        kwargs = self._sanitize_openai_kwargs(kwargs)
+        response = self.client.chat.completions.create(**kwargs)
+        for chunk in response:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
 
     @traceable(run_type="llm", name="chat_completion_with_tools")
     def chat_completion_with_tools(
@@ -330,6 +412,7 @@ class LLMClient:
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
+        kwargs = self._sanitize_openai_kwargs(kwargs)
         response = self.client.chat.completions.create(**kwargs)
         resp_msg = response.choices[0].message
 

@@ -289,6 +289,52 @@ class ChatConnector:
                 error_code="PROCESSING_ERROR",
             )
 
+    def process_message_stream(self, request: ChatRequest):
+        """
+        메시지 처리 스트리밍 파이프라인
+        """
+        session = self.get_or_create_session(request.session_id)
+
+        if session.blocked_until and datetime.now() < session.blocked_until:
+            remaining = (session.blocked_until - datetime.now()).seconds
+            yield {"type": "error", "content": f"세션이 일시 차단되었습니다. {remaining}초 후 다시 시도해 주세요.", "error_code": "SESSION_BLOCKED"}
+            return
+
+        allowed, remaining = self._rate_limiter.is_allowed(session.session_id)
+        if not allowed:
+            yield {"type": "error", "content": "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.", "error_code": "RATE_LIMITED"}
+            return
+
+        validator = self._get_validator()
+        validation = validator.validate(request.message)
+
+        if not validation.is_valid:
+            session.warnings += 1
+            if session.warnings >= self.max_warnings:
+                session.blocked_until = datetime.now() + timedelta(minutes=10)
+                yield {"type": "error", "content": "보안 정책 위반이 감지되어 세션이 10분간 차단됩니다.", "error_code": "SESSION_BLOCKED_SECURITY"}
+                return
+
+            yield {"type": "error", "content": validation.message, "error_code": "INPUT_REJECTED"}
+            return
+
+        try:
+            chatbot = self._get_chatbot()
+            streamer = chatbot.chat_stream(
+                message=validation.sanitized_input,
+                ticker=request.ticker,
+                use_rag=request.use_rag,
+            )
+
+            for chunk in streamer:
+                yield chunk
+
+            session.message_count += 1
+
+        except Exception as e:
+            logger.error(f"Chat stream processing error: {e}")
+            yield {"type": "error", "content": f"처리 중 오류가 발생했습니다: {str(e)}", "error_code": "PROCESSING_ERROR"}
+
     def clear_session(self, session_id: str) -> bool:
         """세션 대화 기록 초기화"""
         with self._lock:
