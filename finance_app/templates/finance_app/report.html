@@ -58,6 +58,22 @@
         /* hover 시 단일 솔리드 색상 적용 */
     }
 
+    /* Light mode overrides for search results */
+    [data-theme="light"] .search-results {
+        background-color: #ffffff;
+        border-color: #dee2e6;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    [data-theme="light"] .search-result-item {
+        color: #212529 !important;
+        border-bottom-color: #f8f9fa;
+    }
+
+    [data-theme="light"] .search-result-item:hover {
+        background-color: #f1f5f9;
+    }
+
     .search-result-item:last-child {
         border-bottom: none;
     }
@@ -341,9 +357,9 @@
 
                             // 직접 입력 박스는 점멸하지 않게 처리
                             if (item.label.includes('직접 입력')) {
-                                div.className = 'search-result-item text-white';
+                                div.className = 'search-result-item';
                             } else {
-                                div.className = 'search-result-item text-white result-blink';
+                                div.className = 'search-result-item result-blink';
                             }
 
                             // bold rendering for markdown in label
