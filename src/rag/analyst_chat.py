@@ -295,7 +295,7 @@ class AnalystChatbot(RAGBase):
             messages = [
                 {
                     "role": "system",
-                    "content": "Extract all company ticker symbols from the query (e.g., AAPL, MSFT, KO). Return them comma-separated. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If none, return NOTHING.",
+                    "content": "Extract all company ticker symbols from the query. Map Korean company names to their correct US stock ticker symbols (e.g., 애플->AAPL, 마이크로소프트->MSFT, 코카콜라->KO, 펩시->PEP, 펩시코->PEP). Return them comma-separated. Do NOT extract financial terms like AOCI, EBITDA, GAAP, USD. If none, return NOTHING.",
                 },
                 {"role": "user", "content": query},
             ]
