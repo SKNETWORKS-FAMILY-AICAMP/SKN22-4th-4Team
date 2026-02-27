@@ -128,10 +128,12 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow list-unstyled" aria-labelledby="dropdownUser1">
                     {% if user.is_authenticated %}
-                    <li><a class="dropdown-item" href="#">프로필 설정</a></li>
+                    {% if user.has_usable_password %}
+                    <li><a class="dropdown-item" href="{% url 'finance_app:profile' %}">프로필 설정</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
+                    {% endif %}
                     <li>
                         <form method="post" action="{% url 'logout' %}">
                             {% csrf_token %}

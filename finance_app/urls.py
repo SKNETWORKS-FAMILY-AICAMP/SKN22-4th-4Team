@@ -7,6 +7,7 @@ app_name = "finance_app"
 urlpatterns = [
     path("", views.home, name="home"),
     path("signup/", views.SignUpView.as_view(), name="signup"),
+    path("profile/", views.profile_view, name="profile"),
     path("chat/", views.chat, name="chat"),
     path("api/chat/", views.chat_api, name="chat_api"),  # Chatbot API
     path("calendar/", views.calendar_view, name="calendar"),

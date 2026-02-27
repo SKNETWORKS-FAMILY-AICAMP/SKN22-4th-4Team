@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    /* 프로필 설정 입력 폼 스타일 (Premium Dark 테마 연동) */
+    .premium-card input,
+    .premium-card select {
+        background-color: var(--bg-main) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        width: 100%;
+    }
+
+    .premium-card input:focus {
+        box-shadow: var(--shadow-glow-blue) !important;
+        border-color: var(--accent-blue) !important;
+        outline: none;
+    }
+
+    /* Django Form Help Text 등 스타일링 */
+    .helptext {
+        list-style: none;
+        padding-left: 0;
+        margin-bottom: 0;
+        margin-top: 0.5rem;
+    }
+
+    .helptext li {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .helptext li::before {
+        content: "•";
+        color: var(--accent-blue);
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center py-5">
+    <div class="premium-card p-5" style="max-width: 600px; width: 100%;">
+        <div class="text-center mb-4">
+            <i class="bi bi-person-gear display-4 text-primary-accent mb-3 d-block"></i>
+            <h2 class="text-white fw-bold">프로필 설정</h2>
+            <p class="text-secondary mt-2">내 계정 정보를 관리하세요.</p>
+        </div>
+
+        <!-- 닉네임 변경 폼 -->
+        <div class="mb-5 pb-4 border-bottom border-secondary">
+            <h4 class="text-light mb-4"><i class="bi bi-person-vcard me-2"></i>닉네임 변경</h4>
+            <form id="profileForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="update_profile" value="1">
+
+                {% if profile_form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for error in profile_form.non_field_errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for field in profile_form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label text-light fw-semibold">
+                        {{ field.label }}
+                    </label>
+                    <div class="input-group">
+                        {{ field }}
+                    </div>
+                    {% if field.help_text %}
+                    <div class="form-text text-secondary small mt-1">{{ field.help_text|safe }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">닉네임 저장</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 비밀번호 변경 폼 -->
+        <div>
+            <h4 class="text-light mb-4"><i class="bi bi-shield-lock me-2"></i>비밀번호 변경</h4>
+            <form id="passwordForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="update_password" value="1">
+
+                {% if password_form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for error in password_form.non_field_errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for field in password_form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label text-light fw-semibold">
+                        {{ field.label }}
+                    </label>
+                    <div class="input-group">
+                        {{ field }}
+                    </div>
+                    {% if field.help_text %}
+                    <div class="form-text text-secondary small mt-1">{{ field.help_text|safe }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-premium btn-lg fw-bold">비밀번호 변경</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const forms = document.querySelectorAll('form');
+
+        forms.forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                // 부드러운 UX를 위해 폼 기본 제출(새로고침) 차단
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+
+                // 버튼 비활성화 & 로딩 스피너 표시
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>처리 중...';
+
+                try {
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    const data = await response.json();
+
+                    // 기존 에러 메시지 초기화
+                    this.querySelectorAll('.text-danger.small, .alert-danger').forEach(el => el.remove());
+
+                    if (data.success) {
+                        // 성공 메시지 토스트 표시
+                        showToast(data.message, 'success');
+
+                        // 비밀번호 변경일 경우 기존 입력값 리셋
+                        if (formData.get('update_password')) {
+                            this.reset();
+                        }
+                    } else {
+                        // 에러 렌더링
+                        if (data.errors) {
+                            for (const [field, messages] of Object.entries(data.errors)) {
+                                if (field === '__all__') {
+                                    const errorDiv = document.createElement('div');
+                                    errorDiv.className = 'alert alert-danger';
+                                    errorDiv.textContent = messages.join(' ');
+                                    this.insertBefore(errorDiv, this.firstChild);
+                                } else {
+                                    const input = this.querySelector(`[name="${field}"]`);
+                                    if (input) {
+                                        const errorDiv = document.createElement('div');
+                                        errorDiv.className = 'text-danger small mt-1';
+                                        errorDiv.textContent = messages.join(' ');
+                                        // 헬프 텍스트 밑이나 인풋 그룹 뒤에 삽입
+                                        input.closest('.mb-3').appendChild(errorDiv);
+                                    }
+                                }
+                            }
+                        }
+                        showToast('입력값을 다시 확인해 주세요.', 'danger');
+                    }
+                } catch (error) {
+                    showToast('서버 통신 중 오류가 발생했습니다.', 'danger');
+                } finally {
+                    // 버튼 원상복구
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            });
+        });
+
+        // 커스텀 토스트 알림 함수
+        function showToast(message, type) {
+            const mainElement = document.querySelector('main.overflow-auto');
+            if (!mainElement) return;
+
+            // 기존 알림창 제거
+            document.querySelectorAll('.dynamic-alert').forEach(el => el.remove());
+
+            const alertHtml = `
+              <div class="alert alert-${type} alert-dismissible fade show dynamic-alert mt-2 shadow" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            `;
+
+            // 상단에 삽입 후 스크롤 업 (어느 쪽이 진짜 스크롤 컨테이너인지에 따라 둘 다 대응)
+            mainElement.insertAdjacentHTML('afterbegin', alertHtml);
+            mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+            document.body.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+</script>
+{% endblock %}
