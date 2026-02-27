@@ -222,3 +222,53 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
 ACCOUNT_EMAIL_REQUIRED = False
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Celery + Redis 비동기 작업 큐 설정
+# ─────────────────────────────────────────────────────────────────────────────
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# 브로커: Redis (작업을 큐에 넣는 역할)
+CELERY_BROKER_URL = REDIS_URL
+
+# 결과 백엔드: Redis (완료된 태스크 결과 저장)
+CELERY_RESULT_BACKEND = REDIS_URL
+
+# 직렬화 설정 (JSON이 Pickle보다 안전)
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+
+# 타임존
+CELERY_TIMEZONE = TIME_ZONE
+
+# 태스크 결과 보관 시간: 1시간 (3600초)
+CELERY_RESULT_EXPIRES = 3600
+
+# 태스크 실패 시 재시도 설정
+CELERY_TASK_ACKS_LATE = True            # 태스크 완료 후 ack (장애 시 재처리 보장)
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1   # 무거운 태스크 대비 한 번에 1개만 prefetch
+
+# 태스크 라우팅 (무거운 태스크는 heavy 큐, 빠른 건 default 큐)
+CELERY_TASK_ROUTES = {
+    "finance_app.tasks.orchestrate_report_pipeline": {"queue": "heavy"},
+    "finance_app.tasks.generate_report_task": {"queue": "heavy"},
+    "finance_app.tasks.generate_comparison_report_task": {"queue": "heavy"},
+    "finance_app.tasks.generate_charts_for_ticker_task": {"queue": "default"},
+}
+
+# Worker Pool 설정 (OS 자동 감지)
+# - Windows: prefork 미지원 → threads 필수
+# - macOS:   prefork가 SIGSEGV 충돌 → threads 사용
+# - Linux:   prefork 정상 작동, 배포 환경에서 성능 우수
+import platform
+_os_name = platform.system()  # "Windows", "Darwin"(macOS), "Linux"
+
+if _os_name == "Linux":
+    CELERY_WORKER_POOL = "prefork"     # Linux 배포 서버: 가장 효율적
+    CELERY_WORKER_CONCURRENCY = 4
+else:
+    CELERY_WORKER_POOL = "threads"     # Windows / macOS: 안전한 스레드 모드
+    CELERY_WORKER_CONCURRENCY = 4
+
+

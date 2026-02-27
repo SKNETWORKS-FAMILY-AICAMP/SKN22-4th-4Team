@@ -312,24 +312,50 @@
     const chartsContainer = document.getElementById('charts-container');
     const hiddenReportMd = document.getElementById('hiddenReportMd');
     const hiddenFilePrefix = document.getElementById('hiddenFilePrefix');
+    const loaderText = document.getElementById('loaderText');
 
     let selectedTickers = new Set();
     let searchTimeout = null;
-    let renderedCharts = []; // Track rendered charts for resize fixes
+    let renderedCharts = [];      // Plotly 차트 추적
+    let pollingInterval = null;   // 폴링 인터벌 핸들
 
-    // Window resize handler for Plotly charts
+    // ── 로딩 메시지 애니메이션 ─────────────────────────────────────────────
+    const LOADING_MESSAGES = [
+        '레포트를 생성 중입니다. 잠시만 기다려주세요...',
+        '📊 재무 데이터를 수집하고 있습니다...',
+        '🤖 AI가 분석 중입니다...',
+        '📈 차트 데이터를 처리하고 있습니다...',
+        '📝 보고서를 정리하고 있습니다...',
+        '⏳ 거의 완료되었습니다...',
+    ];
+    let msgIdx = 0;
+    let msgInterval = null;
+
+    function startLoadingMessages() {
+        msgIdx = 0;
+        loaderText.textContent = LOADING_MESSAGES[0];
+        msgInterval = setInterval(() => {
+            msgIdx = (msgIdx + 1) % LOADING_MESSAGES.length;
+            loaderText.textContent = LOADING_MESSAGES[msgIdx];
+        }, 4000);
+    }
+
+    function stopLoadingMessages() {
+        if (msgInterval) clearInterval(msgInterval);
+        msgInterval = null;
+    }
+
+    // ── Window 리사이즈 시 Plotly 차트 재조정 ──────────────────────────────
     window.addEventListener('resize', function () {
         requestAnimationFrame(() => {
             renderedCharts.forEach(id => {
                 const chartDiv = document.getElementById(id);
-                if (chartDiv) {
-                    Plotly.Plots.resize(chartDiv);
-                }
+                if (chartDiv) Plotly.Plots.resize(chartDiv);
             });
         });
     });
 
-    // Search input handler
+    // ── 검색 입력 핸들러 ──────────────────────────────────────────────────
     tickerSearch.addEventListener('input', function (e) {
         const query = e.target.value.trim();
         clearTimeout(searchTimeout);
@@ -354,15 +380,9 @@
                     if (data.results && data.results.length > 0) {
                         data.results.forEach(item => {
                             const div = document.createElement('div');
-
-                            // 직접 입력 박스는 점멸하지 않게 처리
-                            if (item.label.includes('직접 입력')) {
-                                div.className = 'search-result-item';
-                            } else {
-                                div.className = 'search-result-item result-blink';
-                            }
-
-                            // bold rendering for markdown in label
+                            div.className = item.label.includes('직접 입력')
+                                ? 'search-result-item'
+                                : 'search-result-item result-blink';
                             div.innerHTML = marked.parseInline(item.label);
                             div.onclick = () => {
                                 addTicker(item.value);
@@ -386,14 +406,12 @@
         }, 300);
     });
 
-    // Close search results on outside click
     document.addEventListener('click', function (e) {
         if (!tickerSearch.contains(e.target) && !searchResults.contains(e.target)) {
             searchResults.style.display = 'none';
         }
     });
 
-    // Manual add handling
     function handleManualAdd() {
         const val = tickerSearch.value.trim();
         if (val) {
@@ -414,7 +432,6 @@
     function addTicker(tickerValue) {
         const uppercaseVal = tickerValue.toUpperCase();
         if (selectedTickers.has(uppercaseVal)) return;
-
         selectedTickers.add(uppercaseVal);
         updateTickerUI();
     }
@@ -427,21 +444,15 @@
     function updateTickerUI() {
         if (selectedTickers.size === 0) {
             emptyTickersMsg.style.display = 'inline';
-            // keep the container clean
             Array.from(selectedTickersContainer.children).forEach(child => {
                 if (child !== emptyTickersMsg) child.remove();
             });
             return;
         }
-
         emptyTickersMsg.style.display = 'none';
-
-        // Remove existing tags
         Array.from(selectedTickersContainer.children).forEach(child => {
             if (child !== emptyTickersMsg) child.remove();
         });
-
-        // Re-render tags
         selectedTickers.forEach(ticker => {
             const span = document.createElement('span');
             span.className = 'ticker-tag text-light shadow-sm';
@@ -450,149 +461,171 @@
         });
     }
 
-    // Generate Report
-    generateBtn.addEventListener('click', function () {
+    // ── UI 상태 리셋 헬퍼 ─────────────────────────────────────────────────
+    function setLoadingState(loading) {
+        generateBtn.disabled = loading;
+        tickerSearch.disabled = loading;
+        addTickerBtn.disabled = loading;
+        reportLoader.style.display = loading ? 'block' : 'none';
+        if (!loading) {
+            stopLoadingMessages();
+        }
+    }
+
+    // ── 차트 렌더링 헬퍼 ──────────────────────────────────────────────────
+    function renderCharts(charts) {
+        if (!charts || charts.length === 0) return;
+
+        charts.forEach((chartObj, idx) => {
+            const tickerHeader = document.createElement('h4');
+            tickerHeader.className = 'text-info mt-5 mb-3';
+            tickerHeader.innerText = `${chartObj.ticker} 가격/재무 차트`;
+            chartsContainer.appendChild(tickerHeader);
+
+            const chartTypes = [
+                { key: 'line_chart', id: `chart-line-${idx}` },
+                { key: 'candle_chart', id: `chart-candle-${idx}` },
+                { key: 'volume_chart', id: `chart-vol-${idx}` },
+                { key: 'finance_chart', id: `chart-fin-${idx}` },
+            ];
+
+            chartTypes.forEach(({ key, id }) => {
+                if (!chartObj[key]) return;
+                const div = document.createElement('div');
+                div.id = id;
+                div.className = 'mb-4 premium-card p-2 w-100';
+                div.style.minHeight = '450px';
+                chartsContainer.appendChild(div);
+                const parsed = JSON.parse(chartObj[key]);
+                const layout = parsed.layout || {};
+                layout.plot_bgcolor = 'transparent';
+                layout.paper_bgcolor = 'transparent';
+                layout.font = { color: 'var(--text-primary)' };
+                Plotly.newPlot(id, parsed.data, layout, { responsive: true });
+                renderedCharts.push(id);
+            });
+        });
+    }
+
+    // ── 결과 표시 ──────────────────────────────────────────────────────────
+    function displayResult(data) {
+        resultsArea.style.display = 'block';
+        reportContentBox.innerHTML = marked.parse(data.report_md);
+        hiddenReportMd.value = data.report_md;
+        hiddenFilePrefix.value = data.file_prefix;
+        chartsContainer.innerHTML = '';
+        renderedCharts = [];
+        renderCharts(data.charts);
+
+        // 결과 영역으로 부드럽게 스크롤
+        resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── 폴링 로직 ──────────────────────────────────────────────────────────
+    function startPolling(taskId) {
+        const POLL_INTERVAL_MS = 3000; // 3초마다 상태 확인
+        let failCount = 0;
+        const MAX_FAIL = 5;
+
+        console.log(`[POLL] 폴링 시작: task_id=${taskId}`);
+
+        pollingInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/report/task/${taskId}/status/`);
+                const data = await res.json();
+
+                console.log(`[POLL] 상태: ${data.state}`);
+
+                if (data.state === 'SUCCESS') {
+                    clearInterval(pollingInterval);
+                    setLoadingState(false);
+                    if (data.success) {
+                        displayResult(data);
+                    } else {
+                        alert(`오류 발생: ${data.error}`);
+                    }
+
+                } else if (data.state === 'FAILURE') {
+                    clearInterval(pollingInterval);
+                    setLoadingState(false);
+                    alert(`레포트 생성 실패: ${data.error}`);
+
+                } else if (data.state === 'STARTED') {
+                    loaderText.textContent = '🤖 AI가 분석 중입니다...';
+
+                } else if (data.state === 'RETRY') {
+                    loaderText.textContent = '🔄 재시도 중...';
+
+                }
+                // PENDING 상태는 로딩 메시지 애니메이션 유지
+                failCount = 0;
+
+            } catch (err) {
+                console.error('[POLL] 폴링 오류:', err);
+                failCount++;
+                if (failCount >= MAX_FAIL) {
+                    clearInterval(pollingInterval);
+                    setLoadingState(false);
+                    alert('네트워크 오류로 상태 확인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                }
+            }
+        }, POLL_INTERVAL_MS);
+    }
+
+    // ── 레포트 생성 버튼 ───────────────────────────────────────────────────
+    generateBtn.addEventListener('click', async function () {
         if (selectedTickers.size === 0) {
             alert('분석할 대상(티커)을 하나 이상 선택해주세요.');
             return;
         }
 
         const tickersList = Array.from(selectedTickers);
-
-        // Fetch chart preferences
         const chartOptions = {
             line: document.getElementById('chartLine').checked,
             candle: document.getElementById('chartCandle').checked,
             volume: document.getElementById('chartVolume').checked,
-            finance: document.getElementById('chartFinance').checked
+            finance: document.getElementById('chartFinance').checked,
         };
 
-        // UI updates
-        generateBtn.disabled = true;
-        tickerSearch.disabled = true;
-        addTickerBtn.disabled = true;
-        reportLoader.style.display = 'block';
+        // UI 초기화
+        setLoadingState(true);
+        startLoadingMessages();
         resultsArea.style.display = 'none';
         reportContentBox.innerHTML = '';
         chartsContainer.innerHTML = '';
-        renderedCharts = []; // Reset tracked charts
+        renderedCharts = [];
+        if (pollingInterval) clearInterval(pollingInterval);
 
-        fetch('/api/report/generate/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // Add CSRF token header if needed
-            },
-            body: JSON.stringify({
-                tickers: tickersList,
-                charts: chartOptions
-            })
-        })
-            .then(res => res.json())
-            .then(data => {
-                generateBtn.disabled = false;
-                tickerSearch.disabled = false;
-                addTickerBtn.disabled = false;
-                reportLoader.style.display = 'none';
-
-                if (data.error) {
-                    alert(`오류 발생: ${data.error}`);
-                    return;
-                }
-
-                if (data.success) {
-                    resultsArea.style.display = 'block';
-
-                    // Render markdown
-                    reportContentBox.innerHTML = marked.parse(data.report_md);
-
-                    // Update hidden inputs for PDF download
-                    hiddenReportMd.value = data.report_md;
-                    hiddenFilePrefix.value = data.file_prefix;
-
-                    // Render charts if any
-                    if (data.charts && data.charts.length > 0) {
-                        data.charts.forEach((chartObj, idx) => {
-                            const tickerHeader = document.createElement('h4');
-                            tickerHeader.className = 'text-info mt-5 mb-3';
-                            tickerHeader.innerText = `${chartObj.ticker} 가격/재무 차트`;
-                            chartsContainer.appendChild(tickerHeader);
-
-                            // Line Chart
-                            if (chartObj.line_chart) {
-                                const lineDiv = document.createElement('div');
-                                lineDiv.id = `chart-line-${idx}`;
-                                lineDiv.className = 'mb-4 premium-card p-2 w-100';
-                                lineDiv.style.minHeight = '450px';
-                                chartsContainer.appendChild(lineDiv);
-                                const parsedLine = JSON.parse(chartObj.line_chart);
-                                let layout = parsedLine.layout || {};
-                                layout.plot_bgcolor = 'transparent';
-                                layout.paper_bgcolor = 'transparent';
-                                layout.font = { color: 'var(--text-primary)' };
-                                Plotly.newPlot(lineDiv.id, parsedLine.data, layout, { responsive: true });
-                                renderedCharts.push(lineDiv.id);
-                            }
-
-                            // Candle Chart
-                            if (chartObj.candle_chart) {
-                                const candleDiv = document.createElement('div');
-                                candleDiv.id = `chart-candle-${idx}`;
-                                candleDiv.className = 'mb-4 premium-card p-2 w-100';
-                                candleDiv.style.minHeight = '450px';
-                                chartsContainer.appendChild(candleDiv);
-                                const parsedCandle = JSON.parse(chartObj.candle_chart);
-                                let layout = parsedCandle.layout || {};
-                                layout.plot_bgcolor = 'transparent';
-                                layout.paper_bgcolor = 'transparent';
-                                layout.font = { color: 'var(--text-primary)' };
-                                Plotly.newPlot(candleDiv.id, parsedCandle.data, layout, { responsive: true });
-                                renderedCharts.push(candleDiv.id);
-                            }
-
-                            // Volume Chart
-                            if (chartObj.volume_chart) {
-                                const volDiv = document.createElement('div');
-                                volDiv.id = `chart-vol-${idx}`;
-                                volDiv.className = 'mb-4 premium-card p-2 w-100';
-                                volDiv.style.minHeight = '450px';
-                                chartsContainer.appendChild(volDiv);
-                                const parsedVol = JSON.parse(chartObj.volume_chart);
-                                let layout = parsedVol.layout || {};
-                                layout.plot_bgcolor = 'transparent';
-                                layout.paper_bgcolor = 'transparent';
-                                layout.font = { color: 'var(--text-primary)' };
-                                Plotly.newPlot(volDiv.id, parsedVol.data, layout, { responsive: true });
-                                renderedCharts.push(volDiv.id);
-                            }
-
-                            // Finance Chart
-                            if (chartObj.finance_chart) {
-                                const finDiv = document.createElement('div');
-                                finDiv.id = `chart-fin-${idx}`;
-                                finDiv.className = 'mb-4 premium-card p-2 w-100';
-                                finDiv.style.minHeight = '450px';
-                                chartsContainer.appendChild(finDiv);
-                                const parsedFin = JSON.parse(chartObj.finance_chart);
-                                let layout = parsedFin.layout || {};
-                                layout.plot_bgcolor = 'transparent';
-                                layout.paper_bgcolor = 'transparent';
-                                layout.font = { color: 'var(--text-primary)' };
-                                Plotly.newPlot(finDiv.id, parsedFin.data, layout, { responsive: true });
-                                renderedCharts.push(finDiv.id);
-                            }
-                        });
-                    }
-                }
-            })
-            .catch(err => {
-                console.error('Generation error:', err);
-                generateBtn.disabled = false;
-                tickerSearch.disabled = false;
-                addTickerBtn.disabled = false;
-                reportLoader.style.display = 'none';
-                alert('레포트 생성 중 네트워크 오류가 발생했습니다.');
+        try {
+            const res = await fetch('/api/report/generate/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tickers: tickersList, charts: chartOptions }),
             });
+            const data = await res.json();
+
+            if (data.error) {
+                setLoadingState(false);
+                alert(`오류 발생: ${data.error}`);
+                return;
+            }
+
+            if (data.async && data.task_id) {
+                // ── 비동기 모드: 폴링 시작 ──────────────────────────────────
+                loaderText.textContent = `⚙️ 작업 접수 완료. 레포트를 생성 중입니다... (작업 ID: ${data.task_id})`;
+                startPolling(data.task_id);
+
+            } else if (data.success) {
+                // ── 동기 폴백 모드: 즉시 결과 표시 ────────────────────────
+                setLoadingState(false);
+                displayResult(data);
+            }
+
+        } catch (err) {
+            console.error('Generation error:', err);
+            setLoadingState(false);
+            alert('레포트 생성 중 네트워크 오류가 발생했습니다.');
+        }
     });
 </script>
 {% endblock %}

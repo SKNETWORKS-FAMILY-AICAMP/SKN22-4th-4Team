@@ -130,7 +130,7 @@ def translate_batch(company_names: List[str], batch_size: int = 20) -> Dict[str,
                         "content": f"다음 미국 기업명들을 한글로 번역하세요:\n{batch_text}",
                     },
                 ],
-                max_tokens=1000,
+                max_completion_tokens=1000,
                 temperature=0.1,
             )
 
