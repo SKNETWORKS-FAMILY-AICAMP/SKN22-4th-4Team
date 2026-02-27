@@ -214,7 +214,7 @@ LOGGING = {
 # Social Account Provider specific settings
 SOCIALACCOUNT_PROVIDERS['kakao']['SCOPE'] = ['profile_nickname', 'account_email']
 SOCIALACCOUNT_PROVIDERS['google']['SCOPE'] = ['profile', 'email']
-SOCIALACCOUNT_PROVIDERS['naver']['SCOPE'] = ['name', 'email']
+SOCIALACCOUNT_PROVIDERS['naver']['SCOPE'] = ['name']
 SOCIALACCOUNT_PROVIDERS['github']['SCOPE'] = ['user:email', 'read:user']
 
 # To populate user models from provider
