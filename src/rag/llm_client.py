@@ -75,6 +75,20 @@ class LLMClient:
             raise ValueError("OPENAI_API_KEY 환경 변수가 필요합니다.")
         self.client = OpenAI(api_key=api_key)
 
+    # temperature / max_completion_tokens를 지원하지 않는 모델 목록
+    _RESTRICTED_MODELS = {"gpt-5-nano", "o1-mini", "o1-preview", "o1", "o3-mini"}
+
+    def _sanitize_openai_kwargs(self, kwargs: dict) -> dict:
+        """
+        모델 호환성을 고려하여 API kwargs를 정리합니다.
+        - gpt-5-nano, o1 계열 등은 temperature / max_completion_tokens 미지원
+        """
+        model = kwargs.get("model", self.model)
+        if model in self._RESTRICTED_MODELS:
+            kwargs.pop("temperature", None)
+            kwargs.pop("max_completion_tokens", None)
+        return kwargs
+
     @traceable(run_type="llm", name="chat_completion")
     def chat_completion(
         self,
@@ -170,12 +184,13 @@ class LLMClient:
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
         }
 
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
+        kwargs = self._sanitize_openai_kwargs(kwargs)
         response = self.client.chat.completions.create(**kwargs)
         return response.choices[0].message.content or ""
 
@@ -235,9 +250,10 @@ class LLMClient:
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
             "stream": True,
         }
+        kwargs = self._sanitize_openai_kwargs(kwargs)
         response = self.client.chat.completions.create(**kwargs)
         for chunk in response:
             if chunk.choices and len(chunk.choices) > 0:
@@ -396,6 +412,7 @@ class LLMClient:
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
+        kwargs = self._sanitize_openai_kwargs(kwargs)
         response = self.client.chat.completions.create(**kwargs)
         resp_msg = response.choices[0].message
 

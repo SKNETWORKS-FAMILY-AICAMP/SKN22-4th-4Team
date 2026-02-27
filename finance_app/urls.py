@@ -25,6 +25,12 @@ urlpatterns = [
         name="generate_report_api",
     ),
     path(
+        "api/report/task/<str:task_id>/status/",
+        report_views.report_task_status,
+        name="report_task_status",
+    ),
+
+    path(
         "report/download/pdf/",
         report_views.download_report_pdf,
         name="download_report_pdf",

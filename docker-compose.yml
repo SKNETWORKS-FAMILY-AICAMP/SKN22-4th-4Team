@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  # ──────────────────────────────────────────────────────────────────
+  # Redis: Celery 브로커 + 결과 백엔드
+  # ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: finance_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────────────────────────
+  # Django 웹 서버
+  # ──────────────────────────────────────────────────────────────────
+  web:
+    build: .
+    container_name: finance_web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 config.wsgi:application"
+
+  # ──────────────────────────────────────────────────────────────────
+  # Celery Worker: heavy 큐 (RAG + LLM 작업)
+  # ──────────────────────────────────────────────────────────────────
+  celery_worker_heavy:
+    build: .
+    container_name: finance_celery_heavy
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A config worker --loglevel=info --queues=heavy --concurrency=2 --hostname=heavy@%h
+
+  # ──────────────────────────────────────────────────────────────────
+  # Celery Worker: default 큐 (차트 생성 등 일반 작업)
+  # ──────────────────────────────────────────────────────────────────
+  celery_worker_default:
+    build: .
+    container_name: finance_celery_default
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A config worker --loglevel=info --queues=default --concurrency=4 --hostname=default@%h
+
+  # ──────────────────────────────────────────────────────────────────
+  # Celery Flower: 작업 모니터링 대시보드 (선택사항)
+  # ──────────────────────────────────────────────────────────────────
+  flower:
+    build: .
+    container_name: finance_flower
+    restart: unless-stopped
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A config flower --port=5555 --broker=redis://redis:6379/0
+
+volumes:
+  redis_data:
