@@ -26,7 +26,7 @@
 ```bash
 # 1. 저장소 클론
 git clone <repository-url>
-cd SKN22-3rd-4Team
+cd SKN22-4th-4Team
 
 # 2. 가상 환경 설정
 python -m venv venv
@@ -40,11 +40,14 @@ pip install -r requirements.txt
 cp .env.example .env
 # .env 파일을 열어 API 키 입력
 
-# 5. 앱 실행
-streamlit run app.py
+# 5. 데이터베이스 마이그레이션
+python manage.py migrate
+
+# 6. 앱 실행
+python manage.py runserver
 ```
 
-브라우저에서 `http://localhost:8501` 접속!
+브라우저에서 `http://localhost:8000` 접속!
 
 ---
 
@@ -213,7 +216,7 @@ python scripts/sp500_scheduler.py
 ```
 
 > [!NOTE]
-> Streamlit 앱을 실행하면 백그라운드 스케줄러가 자동으로 함께 시작됩니다.
+> Django 앱을 실행하면(`python manage.py runserver`) 백그라운드 스케줄러가 자동으로 함께 시작됩니다.
 
 ---
 
@@ -265,39 +268,29 @@ else:
 ## 7. 프로젝트 구조
 
 ```
-SKN22-3rd-4Team/
-├── app.py                    # Streamlit 메인 앱
+SKN22-4th-4Team/
+├── manage.py                 # Django 관리 도구
 ├── requirements.txt          # Python 의존성
 ├── .env                      # 환경 변수 (API 키)
+│
+├── config/                   # Django 설정 (settings, urls, wsgi)
+├── finance_app/              # 메인 Django 앱 (Views, Templates, URLs)
+│   ├── models.py             # DB 모델 (Watchlist, Notification)
+│   ├── views.py              # 홈/채팅/캘린더/알림 API
+│   └── templates/            # HTML 템플릿
 │
 ├── src/
 │   ├── core/                 # 핵심 모듈 (ChatConnector, Validator)
 │   ├── data/                 # 데이터 클라이언트 (Finnhub, Supabase)
 │   ├── rag/                  # RAG & AI 로직 (Chatbot, Report, GraphRAG)
-│   │
-│   ├── ui/                   # 사용자 인터페이스
-│   │   ├── helpers/          # UI 헬퍼 (차트, 채팅, 인사이트)
-│   │   │   ├── chart_helpers.py
-│   │   │   └── chat_helpers.py
-│   │   └── pages/            # Streamlit 페이지
-│   │       ├── home.py
-│   │       ├── calendar_page.py
-│   │       ├── insights.py
-│   │       └── report_page.py
-│   │
-│   └── utils/                # 유틸리티
-│       ├── chart_utils.py    # 차트 생성 (Matplotlib)
-│       ├── pdf_utils.py      # PDF 생성
-│       └── plotly_charts.py  # 웹 차트 (Plotly)
+│   ├── services/             # 뉴스 분석 서비스 (FinBERT)
+│   ├── tools/                # 환율, 즐겨찾기, 스케줄러 관리
+│   └── utils/                # 유틸리티 (차트, PDF, 티커 검증)
 │
-├── 03_test_report/           # ✅ 테스트 및 모델 평가 산출물
-│   ├── data/                 # Ragas 평가 결과 데이터 (CSV)
-│   ├── docs/                 # 테스트 보고서 및 가이드
-│   └── evaluate_rag.py       # 평가 실행 스크립트
-│
+├── scripts/                  # ETL & 배치 스크립트
+├── static/                   # CSS/JS/Images
 ├── fonts/                    # 폰트 파일
-├── docs/                     # 문서
-└── tests/                    # 유닛 테스트
+└── docs/                     # 문서
 ```
 
 ---
@@ -308,7 +301,7 @@ SKN22-3rd-4Team/
 
 ```
 ┌─────────────────────────────────────┐
-│         Streamlit UI Layer          │
+│         Django Web App (MVT)            │
 └─────────────────────────────────────┘
                   │
                   ▼
@@ -339,8 +332,9 @@ SKN22-3rd-4Team/
 
 ### 새 UI 페이지 추가
 
-1. `src/ui/pages/` 에 새 파일 생성
-2. `app.py` 네비게이션에 추가
+1. `finance_app/templates/` 에 새 HTML 템플릿 생성
+2. `finance_app/views.py` 에 비즈 추가
+3. `finance_app/urls.py` 에 URL 패턴 등록
 
 ### 새 데이터 소스 추가
 
@@ -413,7 +407,7 @@ else:
 |------|------|
 | `ModuleNotFoundError` | `pip install -r requirements.txt` 재실행 |
 | API 연결 실패 | `.env` 파일의 API 키 확인 |
-| Streamlit 오류 | `streamlit cache clear` 후 재시작 |
+| Django 오류 | `python manage.py migrate` 후 재시작 |
 
 ### 폰트 문제 (PDF 한글 깨짐)
 
@@ -456,4 +450,4 @@ python -c "from src.core.input_validator import get_input_validator; print(get_i
 
 ---
 
-*최종 업데이트: 2026-02-23*
+*최종 업데이트: 2026-02-27*
