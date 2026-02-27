@@ -3,6 +3,7 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from django.core.cache import cache
 
 
 def find_ticker_from_web(query: str) -> tuple[str, str | None]:
@@ -17,6 +18,12 @@ def find_ticker_from_web(query: str) -> tuple[str, str | None]:
         tuple[str, str | None]: (Resolved Ticker, Reason/Explanation)
         Example: ("MSFT", "Activision Blizzard was acquired by Microsoft.")
     """
+    normalized_query = query.strip().lower()
+    cache_key = f"ticker_search_{normalized_query.replace(' ', '_')}"
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
+
     api_key = os.environ.get("TAVILY_API_KEY")
     if not api_key:
         print("Warning: TAVILY_API_KEY not found. Skipping web search.")
@@ -70,6 +77,9 @@ def find_ticker_from_web(query: str) -> tuple[str, str | None]:
         # Basic validation: Tickers are usually short alphanumeric
         if len(ticker) > 6 or " " in ticker or ticker == "UNKNOWN":
             return "UNKNOWN", None
+
+        # 캐시에 저장 (24시간)
+        cache.set(cache_key, (ticker, reason), timeout=86400)
 
         return ticker, reason
 
