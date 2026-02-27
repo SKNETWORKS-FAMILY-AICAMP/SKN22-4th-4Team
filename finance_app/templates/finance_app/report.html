@@ -285,10 +285,10 @@
         <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
             <h3 class="text-white mb-0 fw-bold"><i class="bi bi-file-text me-2 text-success opacity-75"></i>생성된 레포트</h3>
             <form id="downloadPdfForm" action="{% url 'finance_app:download_report_pdf' %}" method="POST">
-                <!-- CSRF Token not needed since decorator @csrf_exempt used, but good practice if not -->
                 <input type="hidden" name="report_md" id="hiddenReportMd" value="">
                 <input type="hidden" name="file_prefix" id="hiddenFilePrefix" value="">
-                <button type="submit" class="btn btn-outline-success border-2 fw-bold rounded-pill px-4">
+                <button type="button" id="downloadPdfBtn"
+                    class="btn btn-outline-success border-2 fw-bold rounded-pill px-4">
                     <i class="bi bi-download me-2"></i> PDF 다운로드
                 </button>
             </form>
@@ -612,7 +612,7 @@
 
             if (data.async && data.task_id) {
                 // ── 비동기 모드: 폴링 시작 ──────────────────────────────────
-                loaderText.textContent = `⚙️ 작업 접수 완료. 레포트를 생성 중입니다... (작업 ID: ${data.task_id})`;
+                loaderText.textContent = `⚙️ 작업 접수 완료. 레포트를 생성 중입니다...`;
                 startPolling(data.task_id);
 
             } else if (data.success) {
@@ -625,6 +625,50 @@
             console.error('Generation error:', err);
             setLoadingState(false);
             alert('레포트 생성 중 네트워크 오류가 발생했습니다.');
+        }
+    });
+
+    // ── PDF 다운로드 버튼 (차트 이미지 캡처) ──────────────────────────────
+    document.getElementById('downloadPdfBtn').addEventListener('click', async function () {
+        const form = document.getElementById('downloadPdfForm');
+
+        // 기존에 추가했던 차트 이미지 input들 초기화
+        form.querySelectorAll('.chart-image-input').forEach(el => el.remove());
+
+        // 다운로드 버튼 상태 변경 (클릭 방지)
+        const originalText = this.innerHTML;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> 준비 중...';
+        this.disabled = true;
+
+        try {
+            // 현재 화면에 렌더링된 모든 Plotly 차트를 Base64 PNG로 변환
+            for (const chartId of renderedCharts) {
+                const chartElement = document.getElementById(chartId);
+                if (chartElement) {
+                    const imgUrl = await Plotly.toImage(chartElement, {
+                        format: 'png',
+                        width: 800,
+                        height: 450
+                    });
+
+                    // form에 hidden input으로 데이터 추가
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'chart_images';
+                    input.className = 'chart-image-input';
+                    input.value = imgUrl; // "data:image/png;base64,..."
+                    form.appendChild(input);
+                }
+            }
+            // 폼 전송
+            form.submit();
+        } catch (e) {
+            console.error("차트 캡처 실패:", e);
+            alert("PDF 차트 캡처 중 오류가 발생했습니다.");
+        } finally {
+            // 버튼 상태 복구
+            this.innerHTML = originalText;
+            this.disabled = false;
         }
     });
 </script>
