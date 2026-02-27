@@ -1,5 +1,7 @@
 import json
 import logging
+import base64
+from io import BytesIO
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -252,8 +254,25 @@ def download_report_pdf(request):
     try:
         report_md = request.POST.get("report_md", "")
         file_prefix = request.POST.get("file_prefix", "report")
-
-        pdf_bytes = create_pdf(report_md, chart_images=[])
+        
+        # 1. Base64로 인코딩된 차트 이미지 문자열 리스트 받기
+        chart_images_base64 = request.POST.getlist("chart_images")
+        
+        # 2. Base64 문자열을 BytesIO 객체 리스트로 변환
+        chart_images_bytes = []
+        for b64_str in chart_images_base64:
+            try:
+                # "data:image/png;base64,iVBORw..." 형식에서 실제 데이터 부분만 추출
+                if "," in b64_str:
+                    b64_str = b64_str.split(",", 1)[1]
+                
+                img_data = base64.b64decode(b64_str)
+                chart_images_bytes.append(BytesIO(img_data))
+            except Exception as parse_e:
+                logger.error(f"차트 Base64 디코딩 실패: {parse_e}")
+        
+        # 3. PDF 생성 (텍스트 + 차트 이미지)
+        pdf_bytes = create_pdf(report_md, chart_images=chart_images_bytes)
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{file_prefix}.pdf"'
