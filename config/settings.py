@@ -153,7 +153,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Allauth Settings
-ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_LOGIN_METHODS = {'username'}
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 SOCIALACCOUNT_PROVIDERS = {
@@ -212,16 +212,13 @@ LOGGING = {
 }
 
 # Social Account Provider specific settings
-SOCIALACCOUNT_PROVIDERS['kakao']['SCOPE'] = ['profile_nickname', 'account_email']
+SOCIALACCOUNT_PROVIDERS['kakao']['SCOPE'] = ['profile_nickname']
 SOCIALACCOUNT_PROVIDERS['google']['SCOPE'] = ['profile', 'email']
 SOCIALACCOUNT_PROVIDERS['naver']['SCOPE'] = ['name']
 SOCIALACCOUNT_PROVIDERS['github']['SCOPE'] = ['user:email', 'read:user']
 
 # To populate user models from provider
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
-ACCOUNT_EMAIL_REQUIRED = False
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Celery + Redis 비동기 작업 큐 설정
