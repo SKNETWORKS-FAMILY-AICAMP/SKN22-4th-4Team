@@ -8,9 +8,11 @@ from pathlib import Path
 import pandas as pd
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views import generic
 from django.views.decorators.csrf import csrf_exempt
@@ -446,3 +448,75 @@ def watchlist_list(request):
         Watchlist.objects.filter(user=request.user).values_list("ticker", flat=True)
     )
     return JsonResponse({"tickers": tickers})
+
+
+@login_required
+def profile_view(request):
+    """프로필 설정 페이지"""
+    # 소셜 로그인 가입자 접근 차단 로직 (보안 레이어 추가)
+    if not request.user.has_usable_password():
+        messages.error(request, "소셜 계정은 해당 페이지에 접근할 수 없습니다.")
+        return redirect("home")
+
+    try:
+        from .forms import ProfileForm
+    except ImportError:
+        pass
+
+    profile_form = (
+        ProfileForm(instance=request.user) if "ProfileForm" in locals() else None
+    )
+    password_form = PasswordChangeForm(request.user)
+    if "old_password" in password_form.fields:
+        password_form.fields["old_password"].widget.attrs.pop("autofocus", None)
+
+    if request.method == "POST":
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+        if "update_profile" in request.POST and profile_form:
+            profile_form = ProfileForm(request.POST, instance=request.user)
+            if profile_form.is_valid():
+                profile_form.save()
+                if is_ajax:
+                    return JsonResponse(
+                        {
+                            "success": True,
+                            "message": "닉네임이 성공적으로 변경되었습니다.",
+                        }
+                    )
+                messages.success(request, "닉네임이 성공적으로 변경되었습니다.")
+                return redirect("finance_app:profile")
+            elif is_ajax:
+                return JsonResponse({"success": False, "errors": profile_form.errors})
+
+        elif "update_password" in request.POST:
+            password_form = PasswordChangeForm(request.user, request.POST)
+            if "old_password" in password_form.fields:
+                password_form.fields["old_password"].widget.attrs.pop("autofocus", None)
+
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(
+                    request, user
+                )  # 비밀번호 변경 후 로그인 강제해제 방지
+                if is_ajax:
+                    return JsonResponse(
+                        {
+                            "success": True,
+                            "message": "비밀번호가 성공적으로 변경되었습니다.",
+                        }
+                    )
+                messages.success(request, "비밀번호가 성공적으로 변경되었습니다.")
+                return redirect("finance_app:profile")
+            elif is_ajax:
+                return JsonResponse({"success": False, "errors": password_form.errors})
+
+    return render(
+        request,
+        "finance_app/profile.html",
+        {
+            "profile_form": profile_form,
+            "password_form": password_form,
+            "is_social": not request.user.has_usable_password(),
+        },
+    )
