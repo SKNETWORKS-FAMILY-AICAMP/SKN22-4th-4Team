@@ -1,4 +1,72 @@
 <!-- Includes: Navbar (Top) -->
+<style>
+    .ticker-wrap {
+        width: 100%;
+        overflow: hidden;
+        background-color: #000;
+        padding-left: 100%;
+        box-sizing: content-box;
+        border-bottom: 1px solid var(--border-color, #333);
+        height: 35px;
+        display: flex;
+        align-items: center;
+    }
+
+    .ticker {
+        display: inline-block;
+        white-space: nowrap;
+        animation: ticker-anim 40s linear infinite;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .ticker:hover {
+        animation-play-state: paused;
+    }
+
+    @keyframes ticker-anim {
+        0% {
+            transform: translate3d(0, 0, 0);
+        }
+
+        100% {
+            transform: translate3d(-100%, 0, 0);
+        }
+    }
+
+    .ticker-item {
+        display: inline-block;
+        padding: 0 1.5rem;
+        color: #e2e8f0;
+    }
+
+    .ticker-symbol {
+        color: #94a3b8;
+        margin-right: 5px;
+    }
+
+    .ticker-price {
+        margin-right: 5px;
+    }
+
+    .ticker-up {
+        color: #10b981;
+        /* Emerald 500 */
+    }
+
+    .ticker-down {
+        color: #ef4444;
+        /* Red 500 */
+    }
+</style>
+
+<div class="ticker-wrap" id="tickerWrap" style="display: none;">
+    <div class="ticker" id="tickerContent">
+        <!-- Ticker items will be inserted here via JS -->
+    </div>
+</div>
+
 <header class="p-3 bg-surface border-bottom sticky-top" style="border-color: var(--border-color) !important;">
     <div class="d-flex justify-content-end align-items-center w-100">
         <!-- Auth & Settings Area in Navbar instead of Sidebar bottom -->
@@ -150,3 +218,42 @@
         </div>
     </div>
 </header>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tickerWrap = document.getElementById('tickerWrap');
+        const tickerContent = document.getElementById('tickerContent');
+
+        // Fetch ticker tape data
+        fetch('/api/ticker-tape/')
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(res => {
+                const data = res.data;
+                if (!data || data.length === 0) return;
+
+                tickerWrap.style.display = 'flex';
+
+                let htmlStr = '';
+                data.forEach(item => {
+                    const colorClass = item.is_up ? 'ticker-up' : 'ticker-down';
+                    const icon = item.is_up ? '▲' : '▼';
+
+                    htmlStr += `
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">${item.symbol}</span>
+                        <span class="ticker-price">$${item.price}</span>
+                        <span class="${colorClass}">${icon} ${item.change} (${item.change_percent})</span>
+                    </div>
+                `;
+                });
+
+                // Duplicate the items so the scroll loops seamlessly
+                tickerContent.innerHTML = htmlStr + htmlStr + htmlStr;
+            })
+            .catch(err => {
+                console.error('Failed to load ticker tape data:', err);
+            });
+    });
+</script>

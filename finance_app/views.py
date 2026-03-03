@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import yfinance as yf
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
@@ -602,3 +603,83 @@ def mark_notification_read(request, notif_id):
         return JsonResponse({"error": "알림을 찾을 수 없습니다."}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+# ─── Ticker Tape API ────────────────────────────────────────────────────
+
+def ticker_tape_api(request):
+    """
+    Get real-time stock prices for ticker tape.
+    Uses caching to avoid hitting API limits.
+    """
+    cache_key = "ticker_tape_data"
+    
+    # 1. 매출 상위 탑 10 티커 데이터를 DB에서 조회
+    default_tickers = []
+    if SupabaseClient:
+        try:
+            top_df = SupabaseClient.get_top_companies_by_revenue(year=2025, limit=10)
+            if not top_df.empty:
+                default_tickers = top_df["ticker"].dropna().tolist()
+        except Exception as e:
+            logger.warning(f"Failed to fetch top companies for Ticker Tape: {e}")
+            
+    # DB 조회 실패 시 폴백
+    if not default_tickers:
+        default_tickers = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "BRK-B", "LLY", "V"]
+    
+    user_tickers = []
+    if request.user.is_authenticated:
+        user_tickers = list(Watchlist.objects.filter(user=request.user).values_list("ticker", flat=True))
+    
+    # 중복 제거 및 병합
+    combined_tickers = list(dict.fromkeys(user_tickers + default_tickers))
+    
+    user_cache_key = f"{cache_key}_{request.user.id if request.user.is_authenticated else 'guest'}"
+    cached_data = cache.get(user_cache_key)
+    
+    if cached_data:
+        return JsonResponse({"data": cached_data})
+        
+    results = []
+    
+    try:
+        # yfinance를 사용하여 여러 종목 한 번에 조회 (최적화)
+        tickers_str = " ".join(combined_tickers)
+        data = yf.Tickers(tickers_str)
+        
+        for ticker_symbol in combined_tickers:
+            try:
+                ticker_obj = data.tickers.get(ticker_symbol)
+                if not ticker_obj:
+                    continue
+                    
+                info = ticker_obj.fast_info
+                
+                # fast_info는 속성(attribute) 접근만 지원 (camelCase 키)
+                current_price = getattr(info, 'last_price', None) or getattr(info, 'lastPrice', None)
+                prev_close = getattr(info, 'previous_close', None) or getattr(info, 'previousClose', None)
+                
+                if current_price and prev_close:
+                    change_amount = current_price - prev_close
+                    change_percent = (change_amount / prev_close) * 100
+                    
+                    results.append({
+                        "symbol": ticker_symbol,
+                        "price": f"{current_price:.2f}",
+                        "change": f"{change_amount:+.2f}",
+                        "change_percent": f"{change_percent:+.2f}%",
+                        "is_up": change_amount >= 0
+                    })
+            except Exception as e:
+                logger.error(f"Error fetching data for {ticker_symbol} in Ticker Tape: {e}")
+                continue
+                
+        # API 조회 결과를 캐싱 (3분 = 180초)
+        if results:
+            cache.set(user_cache_key, results, 180)
+            
+        return JsonResponse({"data": results})
+        
+    except Exception as e:
+        logger.error(f"Ticker Tape API Error: {e}")
+        return JsonResponse({"error": "Failed to fetch ticker data", "details": str(e)}, status=500)
