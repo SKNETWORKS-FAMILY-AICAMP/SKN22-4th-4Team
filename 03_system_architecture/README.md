@@ -48,7 +48,7 @@ graph TD
         VectorDB <-->|Sync| SEC["📄 SEC 10-K"]
     end
 
-    Retriever -->|Aggregated Context| LLM["🧠 GPT-4.1-mini / Gemini"]
+    Retriever -->|Aggregated Context| LLM["🧠 Gemini 2.5 Flash (Primary) / GPT Fallback"]
     Agent -->|Final Answer| LLM
     LLM -->|Response| UI
     LLM -.->|Tracing| LS["📊 LangSmith"]
@@ -74,7 +74,7 @@ graph TD
   - **감성 분석 정밀도**: Financial PhraseBank 데이터셋(Full Agreement 기준)에서 **약 97% 정확도** 및 98% 수준의 F1-Score를 달성한 검증된 모델 사용
   - **GraphRAG 확장**: 단일 기업 타겟을 넘어 대상 기업의 공급망 및 파트너사의 뉴스까지 긁어와 다차원 리스크 모니터링
   - 매일 06:00 (KST) 스케줄러가 파이프라인을 자동 구동하여 Supabase에 적재
-- **LLM**: GPT-4.1-mini 기본 / Gemini 2.5 Flash 선택적 (`.env`로 전환)
+- **LLM**: Gemini 2.5 Flash 기본 / GPT-4o-mini 선택적 (`.env`로 전환)
 - **LLM Client**: `llm_client.py` — Gemini/OpenAI 통합 추상화 레이어
 - **LangSmith**: LLM 콜 트레이싱 및 모니터링 (선택적)
 
@@ -126,7 +126,7 @@ graph TD
     end
 
     subgraph "4. 인사이트 생성"
-        L --> M{GPT-4.1-mini / Gemini}
+        L --> M{Gemini 2.5 Flash}
         M --> N[입체적 투자 인사이트 답변]
     end
     end
@@ -144,7 +144,7 @@ graph TD
 
 - **Language**: Python 3.12
 - **Message Broker & Queue**: Celery, Redis
-- **LLM**: GPT-4.1-mini (기본) / Gemini 2.5 Flash (선택)
+- **LLM**: Gemini 2.5 Flash (기본) / GPT-4o-mini (선택)
 - **Graph DB**: Neo4j (Cypher) + NetworkX (분석)
 - **Vector DB**: Supabase pgvector
 - **Tracing**: LangSmith (선택적)

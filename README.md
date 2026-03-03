@@ -18,7 +18,7 @@
 ## 🖐️ 핵심 기능
 
 1. **💬 AI Financial Analyst**: Finnhub 실시간 데이터와 내부 재무 DB를 결합한 RAG 챗봇 (병렬 수집 최적화로 빠른 응답)
-2. **📝 투자 리포트 + 주가 차트**: 단일/비교 분석 레포트 생성 + 3개월 주가 추이 차트 (`gpt-4.1-mini`, 한글명 검색)
+2. **📝 투자 리포트 + 주가 차트**: 단일/비교 분석 레포트 생성 + 3개월 주가 추이 차트 (`Gemini 2.5 Flash` 기반)
 3. **📈 한국형 마켓 대시보드**: KST 기준 실시간 원화(KRW) 환율 및 주요 지표 제공
 4. **⭐ 사이드바 관심기업 Quick Add**: 어디서든 티커/한글명으로 즐겨찾기 추가 (DB 검증 + 한글/비기업 입력 차단)
 5. **🔍 Text-to-SQL**: 자연어 질의를 통한 복잡한 재무 재표 검색
@@ -74,7 +74,7 @@ graph TD
         VectorDB <-->|Sync| SEC["📄 SEC 10-K"]
     end
 
-    Retriever -->|Aggregated Context| LLM["🧠 GPT-4.1-mini / Gemini"]
+    Retriever -->|Aggregated Context| LLM["🧠 Gemini 2.5 Flash (Primary) / GPT Fallback"]
     Agent -->|Final Answer| LLM
     LLM -->|Response| UI
     LLM -.->|Tracing| LS["📊 LangSmith"]
