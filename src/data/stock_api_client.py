@@ -380,33 +380,31 @@ class StockAPIClient:
     def get_price_target(self, symbol: str) -> Dict:
         """
         목표 주가 (애널리스트 컨센서스)
-        Finnhub 실패 시 yfinance로 fallback
+        yfinance 직접 사용 (Finnhub stock/price-target은 Premium 전용으로 항상 403 반환)
         """
-        # Finnhub 시도
-        result = self._request("stock/price-target", {"symbol": symbol.upper()})
-
-        # Finnhub 성공 시 반환
-        if result and "error" not in result:
-            return result
-
-        # yfinance fallback
         try:
             import yfinance as yf
 
             ticker = yf.Ticker(symbol.upper())
             info = ticker.info
 
+            target_mean = info.get("targetMeanPrice")
+            # yfinance에서도 데이터가 없으면 에러 반환
+            if target_mean is None:
+                return {"error": "목표주가 데이터를 가져오지 못했습니다."}
+
             return {
                 "symbol": symbol.upper(),
                 "targetHigh": info.get("targetHighPrice"),
                 "targetLow": info.get("targetLowPrice"),
-                "targetMean": info.get("targetMeanPrice"),
+                "targetMean": target_mean,
                 "targetMedian": info.get("targetMedianPrice"),
                 "lastUpdated": datetime.now().strftime("%Y-%m-%d"),
                 "numberOfAnalysts": info.get("numberOfAnalystOpinions", 0),
+                "source": "yfinance",
             }
         except Exception as e:
-            logger.error(f"yfinance fallback failed: {e}")
+            logger.error(f"yfinance price target failed: {e}")
             return {"error": "목표주가 데이터를 가져오지 못했습니다."}
 
     @api_cache(timeout=86400)  # 24시간

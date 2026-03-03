@@ -154,23 +154,24 @@ def main():
         df_result = result.to_pandas()
 
         # Calculate summary scores from DataFrame
-        metric_names = [
-            "faithfulness",
-            "answer_relevancy",
-            "context_precision",
-            "context_recall",
-        ]
+        # Map display names to actual DataFrame column names (Ragas v0.2 uses class-based names)
+        metric_mapping = {
+            "faithfulness": "faithfulness",
+            "answer_relevancy": "answer_relevancy",
+            "context_precision": "llm_context_precision_with_reference",
+            "context_recall": "context_recall",
+        }
         result_dict = {}
-        for m in metric_names:
-            if m in df_result.columns:
-                mean_val = df_result[m].mean()
-                result_dict[m] = (
+        for display_name, col_name in metric_mapping.items():
+            if col_name in df_result.columns:
+                mean_val = df_result[col_name].mean()
+                result_dict[display_name] = (
                     None
                     if (isinstance(mean_val, float) and math.isnan(mean_val))
                     else float(mean_val)
                 )
             else:
-                result_dict[m] = None
+                result_dict[display_name] = None
 
         # Save summary
         summary_path = os.path.join(output_dir, f"rag_eval_summary_{timestamp}.json")

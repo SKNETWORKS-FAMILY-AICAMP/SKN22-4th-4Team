@@ -136,7 +136,10 @@ class LLMClient:
             content = msg.get("content", "")
 
             if role == "system":
-                system_instruction = content
+                if system_instruction:
+                    system_instruction += "\n\n" + content
+                else:
+                    system_instruction = content
             elif role == "assistant":
                 contents.append(
                     types.Content(
@@ -210,7 +213,9 @@ class LLMClient:
         else:
             return self._openai_chat_stream(messages, temp, max_tok)
 
-    def _gemini_chat_stream(self, messages: List[Dict[str, str]], temperature: float, max_tokens: int):
+    def _gemini_chat_stream(
+        self, messages: List[Dict[str, str]], temperature: float, max_tokens: int
+    ):
         from google.genai import types
 
         system_instruction = None
@@ -221,11 +226,22 @@ class LLMClient:
             content = msg.get("content", "")
 
             if role == "system":
-                system_instruction = content
+                if system_instruction:
+                    system_instruction += "\n\n" + content
+                else:
+                    system_instruction = content
             elif role == "assistant":
-                contents.append(types.Content(role="model", parts=[types.Part.from_text(text=content)]))
+                contents.append(
+                    types.Content(
+                        role="model", parts=[types.Part.from_text(text=content)]
+                    )
+                )
             else:
-                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=content)]))
+                contents.append(
+                    types.Content(
+                        role="user", parts=[types.Part.from_text(text=content)]
+                    )
+                )
 
         config_kwargs = {
             "temperature": temperature,
@@ -233,7 +249,7 @@ class LLMClient:
         }
         if system_instruction:
             config_kwargs["system_instruction"] = system_instruction
-            
+
         config = types.GenerateContentConfig(**config_kwargs)
 
         response_stream = self.client.models.generate_content_stream(
@@ -245,7 +261,9 @@ class LLMClient:
             if chunk.text:
                 yield chunk.text
 
-    def _openai_chat_stream(self, messages: List[Dict[str, str]], temperature: float, max_tokens: int):
+    def _openai_chat_stream(
+        self, messages: List[Dict[str, str]], temperature: float, max_tokens: int
+    ):
         kwargs = {
             "model": self.model,
             "messages": messages,
@@ -311,7 +329,10 @@ class LLMClient:
             content = msg.get("content", "")
 
             if role == "system":
-                system_instruction = content
+                if system_instruction:
+                    system_instruction += "\n\n" + content
+                else:
+                    system_instruction = content
             elif role == "assistant":
                 contents.append(
                     types.Content(

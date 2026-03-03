@@ -148,82 +148,84 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 # Allauth Settings
-ACCOUNT_LOGIN_METHODS = {'username'}
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_LOGIN_METHODS = {"username"}
+ACCOUNT_EMAIL_VERIFICATION = "none"
 
 SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'APP': {
-            'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
-            'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
-            'key': ''
+    "google": {
+        "APP": {
+            "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+            "secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+            "key": "",
         }
     },
-    'github': {
-        'APP': {
-            'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
-            'secret': os.getenv('GITHUB_CLIENT_SECRET', ''),
-            'key': ''
+    "github": {
+        "APP": {
+            "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
+            "secret": os.getenv("GITHUB_CLIENT_SECRET", ""),
+            "key": "",
         }
     },
-    'kakao': {
-        'APP': {
-            'client_id': os.getenv('KAKAO_CLIENT_ID', ''),
-            'secret': os.getenv('KAKAO_CLIENT_SECRET', ''),
-            'key': ''
+    "kakao": {
+        "APP": {
+            "client_id": os.getenv("KAKAO_CLIENT_ID", ""),
+            "secret": os.getenv("KAKAO_CLIENT_SECRET", ""),
+            "key": "",
         }
     },
-    'naver': {
-        'APP': {
-            'client_id': os.getenv('NAVER_CLIENT_ID', ''),
-            'secret': os.getenv('NAVER_CLIENT_SECRET', ''),
-            'key': ''
+    "naver": {
+        "APP": {
+            "client_id": os.getenv("NAVER_CLIENT_ID", ""),
+            "secret": os.getenv("NAVER_CLIENT_SECRET", ""),
+            "key": "",
         }
-    }
+    },
 }
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'debug_allauth.log',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": "debug_allauth.log",
         },
     },
-    'loggers': {
-        'allauth': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+    "loggers": {
+        "allauth": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
         },
-        'request': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+        "request": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
         },
     },
 }
 
 # Social Account Provider specific settings
-SOCIALACCOUNT_PROVIDERS['kakao']['SCOPE'] = ['profile_nickname']
-SOCIALACCOUNT_PROVIDERS['google']['SCOPE'] = ['profile', 'email']
-SOCIALACCOUNT_PROVIDERS['naver']['SCOPE'] = ['name']
-SOCIALACCOUNT_PROVIDERS['github']['SCOPE'] = ['user:email', 'read:user']
+SOCIALACCOUNT_PROVIDERS["kakao"]["SCOPE"] = ["profile_nickname"]
+SOCIALACCOUNT_PROVIDERS["google"]["SCOPE"] = ["profile", "email"]
+SOCIALACCOUNT_PROVIDERS["naver"]["SCOPE"] = ["name"]
+SOCIALACCOUNT_PROVIDERS["github"]["SCOPE"] = ["user:email", "read:user"]
 
 # To populate user models from provider
-ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Celery + Redis 비동기 작업 큐 설정
 # ─────────────────────────────────────────────────────────────────────────────
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# 수정 전: REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# 수정 후: Windows 환경에서 IPv6 충돌을 방지하기 위해 127.0.0.1을 기본값으로 지정합니다.
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 # 브로커: Redis (작업을 큐에 넣는 역할)
 CELERY_BROKER_URL = REDIS_URL
@@ -243,8 +245,8 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_EXPIRES = 3600
 
 # 태스크 실패 시 재시도 설정
-CELERY_TASK_ACKS_LATE = True            # 태스크 완료 후 ack (장애 시 재처리 보장)
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1   # 무거운 태스크 대비 한 번에 1개만 prefetch
+CELERY_TASK_ACKS_LATE = True  # 태스크 완료 후 ack (장애 시 재처리 보장)
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # 무거운 태스크 대비 한 번에 1개만 prefetch
 
 # 태스크 라우팅 (무거운 태스크는 heavy 큐, 빠른 건 default 큐)
 CELERY_TASK_ROUTES = {
@@ -259,13 +261,12 @@ CELERY_TASK_ROUTES = {
 # - macOS:   prefork가 SIGSEGV 충돌 → threads 사용
 # - Linux:   prefork 정상 작동, 배포 환경에서 성능 우수
 import platform
+
 _os_name = platform.system()  # "Windows", "Darwin"(macOS), "Linux"
 
 if _os_name == "Linux":
-    CELERY_WORKER_POOL = "prefork"     # Linux 배포 서버: 가장 효율적
+    CELERY_WORKER_POOL = "prefork"  # Linux 배포 서버: 가장 효율적
     CELERY_WORKER_CONCURRENCY = 4
 else:
-    CELERY_WORKER_POOL = "threads"     # Windows / macOS: 안전한 스레드 모드
+    CELERY_WORKER_POOL = "threads"  # Windows / macOS: 안전한 스레드 모드
     CELERY_WORKER_CONCURRENCY = 4
-
-

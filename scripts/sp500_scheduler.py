@@ -21,7 +21,7 @@ from typing import List, Dict, Optional
 # import pandas as pd
 # import requests
 # import yfinance as yf
-# import pytz
+import pytz
 
 # 프로젝트 루트 경로 추가
 project_root = Path(__file__).parent.parent
@@ -52,6 +52,9 @@ def setup_logging():
 
 
 logger = setup_logging()
+
+MAX_RETRIES = 3
+RETRY_DELAY_BASE = 2
 
 # Slack 알림 기능 제거됨 (User request)
 # SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
