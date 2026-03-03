@@ -1,4 +1,4 @@
-# 📊 미국 재무제표 분석 및 투자 인사이트 봇
+# 📊 StockPulse AI Finance
 
 > AI 기반 미국 상장사 재무제표 분석 및 투자 조언 플랫폼
 
@@ -10,10 +10,10 @@
 
 | Role & Name | Responsibilities | Comment |
 | :--- | :--- | :--- |
-| **이병재 (Team Leader)**<br><sub>PM / ARCHITECTURE / DB</sub><br>[@PracLee](https://github.com/PracLee) | • 프로젝트 기획 및 전체 구조(Architecture) 설계<br>• 재무 데이터베이스(DB) 모델링 및 설계<br>• 챗봇 추천 검색어 로직 구현<br>• 단위/통합 테스트 주도 및 품질 관리 | 단순히 프롬프트만 고치는 게 아니라 로직 밑바닥까지 직접 디버깅하며 RAG 성능을 50% 넘게 끌어올렸을 때, 진짜 엔지니어링의 재미를 느꼈습니다. |
-| **장완식 (Core Dev)**<br><sub>RAG PIPELINE / UI/UX</sub><br>[@JangWS1030](https://github.com/JangWS1030) | • RAG 파이프라인(Chatbot) 핵심 로직 구현<br>• 로그인/인증 시스템 및 즐겨찾기 기능 개발<br>• DB 현황 모니터링 UI 및 PDF 리포트 수정<br>• 전반적인 UI/UX 개선 및 고도화 | AI는 마법이 아니라 공학임을 깨닫고, 데이터 기반의 집요한 검증과 디버깅으로 성능 한계를 극복하며 엔지니어링의 본질을 체득했습니다 |
-| **안민제 (Feature Dev)**<br><sub>SEARCH / QA / DOCS / DB</sub><br>[@minje0209-ux](https://github.com/minje0209-ux) | • 챗봇 검색어 자동완성 알고리즘 구현<br>• 추천 검색어 기능 고도화<br>• ticker/keyword DB 설계<br>• 챗봇/리포트 작성 프롬프트 고도화<br>• README.md 작성 및 기술 문서화 | 스트림릿에 꽤 좋은 도구가 많더라구요! 재밌었어요. |
-| **이신재 (Frontend / QA)**<br><sub>TESTING / UI REFINEMENT</sub><br>[@Codingcooker74](https://github.com/Codingcooker74) | • 주요 기능 단위 테스트(Unit Test) 수행<br>• 사용자 인터페이스(UI) 오류 수정 및 폴리싱<br>• 반응형 레이아웃 최적화 지원 | 어려운 것을 척척해네는 팀원들이 대단해 보였습니다.^^ |
+| **이병재 (Team Leader / Architect)**<br>[@PracLee](https://github.com/PracLee) | • Celery + Redis Async Task 파이프라인 구축<br>• Django SSE 기반 실시간 AI 스트리밍 개발<br>• 소셜 인증 및 다중 유저 시스템 구축 | |
+| **장완식 (AI Engineer / Backend)**<br>[@JangWS1030](https://github.com/JangWS1030) | • Django MVT 웹 서비스 아키텍처 설계<br>• GraphRAG 및 벡터 검색 엔진 통합<br>• RAG 시스템 평가지표 수립 및 품질 검수<br>• Neo4j 그래프 데이터베이스 모델링 | |
+| **안민제 (Frontend Developer)**<br>[@minje0209-ux](https://github.com/minje0209-ux) | • Vanilla JS 기반 동적 렌더링 최적화<br>• Plotly 활용 금융 데이터 시각화<br>• 글로벌 테마(Dark/Light) 스위처 시스템<br>• UI/UX 인터페이스 설계 및 고도화 | |
+| **이신재 (Testing / UI / QA)**<br>[@Codingcooker74](https://github.com/Codingcooker74) | • 시스템 통합 테스트 및 기능 명세 검증<br>• UI/UX 사용성 테스트 및 피드백 도출<br>• 데이터 무결성 검증 및 예외 테스팅<br>• 최종 프로덕트 품질 관리 및 QA | |
 
 ## 🖐️ 핵심 기능
 

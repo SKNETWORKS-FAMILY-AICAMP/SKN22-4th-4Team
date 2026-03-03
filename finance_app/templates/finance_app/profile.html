@@ -135,7 +135,8 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const forms = document.querySelectorAll('form');
+        // 프리미엄 카드 내부의 폼만 인터셉트 (네비게이션 바의 로그아웃 폼 등 제외)
+        const forms = document.querySelectorAll('.premium-card form');
 
         forms.forEach(form => {
             form.addEventListener('submit', async function (e) {
