@@ -213,7 +213,9 @@ class AnalystChatbot(RAGBase):
         # 2. Relationships (GraphRAG)
         rels = all_data.get("relationships", [])
         if rels:
-            context_parts.append(f"\n## 🕸️ 기업 관계망 및 공급망 ({len(rels)}개 연결)")
+            context_parts.append(
+                f"\n---\n## 🕸️ 기업 관계망 및 공급망 ({len(rels)}개 연결)"
+            )
             for rel in rels[:10]:  # Show more relationships (up to 10)
                 source = rel.get("source_company")
                 target = rel.get("target_company")
@@ -234,7 +236,7 @@ class AnalystChatbot(RAGBase):
             change = current - quote.get("pc", 0)
             pct = (change / quote.get("pc", 1) * 100) if quote.get("pc") else 0
             context_parts.append(
-                f"\n## 실시간 시세: ${current:.2f} ({'+' if change >= 0 else ''}{change:.2f}, {pct:.2f}%)"
+                f"\n---\n## 실시간 시세: ${current:.2f} ({'+' if change >= 0 else ''}{change:.2f}, {pct:.2f}%)"
             )
 
         metrics = fh.get("metrics", {}).get("metric", {})
@@ -245,24 +247,86 @@ class AnalystChatbot(RAGBase):
 
         news = fh.get("news", [])
         if news:
-            context_parts.append("\n## 최근 뉴스 요약")
+            context_parts.append("\n---\n## 최근 뉴스 요약")
             for article in news[:3]:
                 context_parts.append(f"- {article.get('headline', '')[:80]}")
 
         # 4. RAG Context (10-K)
         rag_text = all_data.get("rag_context", "")
         if rag_text:
-            context_parts.append("\n## 10-K 보고서 분석 내용")
+            context_parts.append("\n---\n## 10-K 보고서 분석 내용")
             context_parts.append(rag_text)
 
-        # 5. News Sentiment (FinBERT)
+        # 5. Earnings & Analyst Data (★ 정확도 개선 핵심)
+        # 5-1. 실적 서프라이즈 (EPS)
+        recs = fh.get("recommendations", [])
+        if recs:
+            latest_rec = recs[0]
+            context_parts.append("\n---\n## 애널리스트 추천 트렌드")
+            context_parts.append(
+                f"- Buy: {latest_rec.get('buy', 0)}, Hold: {latest_rec.get('hold', 0)}, "
+                f"Sell: {latest_rec.get('sell', 0)}, Strong Buy: {latest_rec.get('strongBuy', 0)}, "
+                f"Strong Sell: {latest_rec.get('strongSell', 0)}"
+            )
+            context_parts.append(f"- 기준월: {latest_rec.get('period', 'N/A')}")
+
+        # 5-2. 목표 주가
+        target = fh.get("price_target", {})
+        if target and "error" not in target and target.get("targetMean"):
+            num_analysts = target.get("numberOfAnalysts", 0)
+            context_parts.append(f"\n---\n## 애널리스트 목표 주가 ({num_analysts}명)")
+            context_parts.append(
+                f"- 평균: ${target['targetMean']:.2f}, "
+                f"최고: ${target.get('targetHigh', 0):.2f}, "
+                f"최저: ${target.get('targetLow', 0):.2f}"
+            )
+
+        # 5-3. 연간/분기 재무 데이터
+        financials = all_data.get("financials", {})
+        annual = financials.get("annual", [])
+        if annual:
+            context_parts.append("\n---\n## 연간 재무 데이터 (10-K 공시 기준)")
+            for report in annual[:3]:
+                year = report.get("fiscal_year", "N/A")
+                parts_fin = [f"### {year}년"]
+                for key, label in [
+                    ("revenue", "매출"),
+                    ("operating_income", "영업이익"),
+                    ("net_income", "순이익"),
+                    ("eps", "EPS"),
+                    ("roe", "ROE"),
+                    ("profit_margin", "영업이익률"),
+                ]:
+                    val = report.get(key)
+                    if val is not None:
+                        parts_fin.append(f"- {label}: {val}")
+                context_parts.extend(parts_fin)
+
+        quarterly = financials.get("quarterly", [])
+        if quarterly:
+            context_parts.append("\n---\n## 최근 분기 실적 (10-Q 공시 기준)")
+            for report in quarterly[:2]:
+                year = report.get("fiscal_year", "N/A")
+                quarter = report.get("fiscal_quarter", "N/A")
+                parts_fin = [f"### {year}년 {quarter}분기"]
+                for key, label in [
+                    ("revenue", "매출"),
+                    ("operating_income", "영업이익"),
+                    ("net_income", "순이익"),
+                ]:
+                    val = report.get(key)
+                    if val is not None:
+                        parts_fin.append(f"- {label}: {val}")
+                context_parts.extend(parts_fin)
+
+        # 6. News Sentiment (FinBERT)
         sentiments = all_data.get("news_sentiment", [])
         logger.info(
             f"[Context] FinBERT sentiment entries for {ticker}: {len(sentiments)}건"
         )
         if sentiments:
             context_parts.append(
-                f"\n## 🤖 AI 분석 최신 뉴스 심리 (FinBERT) - {len(sentiments)}건"
+                f"\n---\n## 🤖 AI 분석 최신 뉴스 심리 (FinBERT) - {len(sentiments)}건"
             )
             pos_count = sum(
                 1
@@ -551,7 +615,7 @@ class AnalystChatbot(RAGBase):
                 llm_result = self.llm_client.chat_completion_with_tools(
                     messages=messages,
                     tools=tools,
-                    max_tokens=2000,
+                    max_tokens=8192,
                     json_mode=True,
                 )
             else:
@@ -561,7 +625,7 @@ class AnalystChatbot(RAGBase):
                     messages=messages,
                     tools=tools,
                     tool_choice="auto",
-                    max_completion_tokens=2000,
+                    max_completion_tokens=8192,
                     response_format={"type": "json_object"},
                 )
                 resp_msg = response.choices[0].message
@@ -628,7 +692,7 @@ class AnalystChatbot(RAGBase):
 
                 # 2차 LLM 호출 (최종 답변)
                 raw_content = (
-                    self._llm_chat(messages, max_tokens=2000, json_mode=True) or ""
+                    self._llm_chat(messages, max_tokens=8192, json_mode=True) or ""
                 )
             else:
                 raw_content = llm_result.get("content") or ""
@@ -716,7 +780,7 @@ class AnalystChatbot(RAGBase):
                 llm_result = self.llm_client.chat_completion_with_tools(
                     messages=messages,
                     tools=tools,
-                    max_tokens=2000,
+                    max_tokens=8192,
                     json_mode=True,  # We still use json_mode for the FIRST call to determine tool use.
                 )
             else:
@@ -725,7 +789,7 @@ class AnalystChatbot(RAGBase):
                     messages=messages,
                     tools=tools,
                     tool_choice="auto",
-                    max_completion_tokens=2000,
+                    max_completion_tokens=8192,
                     response_format={"type": "json_object"},
                 )
                 resp_msg = response.choices[0].message
@@ -819,7 +883,7 @@ class AnalystChatbot(RAGBase):
             full_content = ""
             try:
                 # LLM streaming response
-                streamer = self._llm_chat_stream(stream_messages, max_tokens=2000)
+                streamer = self._llm_chat_stream(stream_messages, max_tokens=8192)
                 for chunk in streamer:
                     if chunk:
                         full_content += chunk
