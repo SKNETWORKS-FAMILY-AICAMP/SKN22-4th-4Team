@@ -10,10 +10,10 @@
 
 | Role & Name | Responsibilities | Comment |
 | :--- | :--- | :--- |
-| **이병재 (Team Leader / Architect)**<br>[@PracLee](https://github.com/PracLee) | • Celery + Redis Async Task 파이프라인 구축<br>• Django SSE 기반 실시간 AI 스트리밍 개발<br>• 소셜 인증 및 다중 유저 시스템 구축 | |
-| **장완식 (AI Engineer / Backend)**<br>[@JangWS1030](https://github.com/JangWS1030) | • Django MVT 웹 서비스 아키텍처 설계<br>• GraphRAG 및 벡터 검색 엔진 통합<br>• RAG 시스템 평가지표 수립 및 품질 검수<br>• Neo4j 그래프 데이터베이스 모델링 | |
+| **이병재 (Team Leader / Architect)**<br>[@PracLee](https://github.com/PracLee) | • Celery + Redis Async Task 파이프라인 구축<br>• Django SSE 기반 실시간 AI 스트리밍 개발<br>• 소셜 인증 및 다중 유저 시스템 구축 | Backend쪽을 더 많이 만져본것같은데 다음 프로젝트에서는 LLM쪽을 더 만져보고 싶다. |
+| **장완식 (AI Engineer / Backend)**<br>[@JangWS1030](https://github.com/JangWS1030) | • Django MVT 웹 서비스 아키텍처 설계<br>• GraphRAG 및 벡터 검색 엔진 통합<br>• RAG 시스템 평가지표 수립 및 품질 검수<br>• Neo4j 그래프 데이터베이스 모델링 | 이번 프로젝트는 다양한 기술 스택을 활용해 볼 수 있어 다방면으로 배운 점이 많은 의미 있는 시간이었습니다. Django 설정부터 Neo4j를 활용한 DB 연동, 성능 향상을 위한 캐싱 적용, 그리고 실제 배포 과정까지 전체적인 파이프라인을 직접 경험하고 해결해 나간 과정이 개인적으로 매우 재밌고 뜻깊었습니다. |
 | **안민제 (Frontend Developer)**<br>[@minje0209-ux](https://github.com/minje0209-ux) | • Vanilla JS 기반 동적 렌더링 최적화<br>• Plotly 활용 금융 데이터 시각화<br>• 글로벌 테마(Dark/Light) 스위처 시스템<br>• UI/UX 인터페이스 설계 및 고도화 | |
-| **이신재 (Testing / UI / QA)**<br>[@Codingcooker74](https://github.com/Codingcooker74) | • 시스템 통합 테스트 및 기능 명세 검증<br>• UI/UX 사용성 테스트 및 피드백 도출<br>• 데이터 무결성 검증 및 예외 테스팅<br>• 최종 프로덕트 품질 관리 및 QA | |
+| **이신재 (Testing / UI / QA)**<br>[@Codingcooker74](https://github.com/Codingcooker74) | • 시스템 통합 테스트 및 기능 명세 검증<br>• UI/UX 사용성 테스트 및 피드백 도출<br>• 데이터 무결성 검증 및 예외 테스팅<br>• 최종 프로덕트 품질 관리 및 QA | 기술적 확장 팩키지에 대해 많은 것을 알게 되었서 의미있는 프로젝트였다. 보다 기술적으로 많은 것을 알 수 있도록 노력해야 겠다. 또한 웹 프로그램의 처음부터 끝까지 모든 것을 이해하고 실행 할 수 있도록 시도해야겠습니다. 모두 고생하셨습니다. 감사합니다. |
 
 ## 🖐️ 핵심 기능
 
