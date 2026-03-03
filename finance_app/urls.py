@@ -40,6 +40,8 @@ urlpatterns = [
     path("api/watchlist/add/", views.watchlist_add, name="watchlist_add"),
     path("api/watchlist/remove/", views.watchlist_remove, name="watchlist_remove"),
     path("api/watchlist/", views.watchlist_list, name="watchlist_list"),
+    # Ticker Tape API
+    path("api/ticker-tape/", views.ticker_tape_api, name="ticker_tape_api"),
     # Company Search API
     path(
         "api/companies/search/", views.search_companies_api, name="search_companies_api"
