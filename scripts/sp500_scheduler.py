@@ -179,7 +179,6 @@ def save_to_supabase(data: List[Dict]) -> int:
                     "market_cap": company["market_cap"],
                     "website": company["website"],
                     "exchange": company["exchange"],
-                    "updated_at": datetime.now(pytz.timezone("Asia/Seoul")).isoformat(),
                 }
 
                 # upsert (ticker 기준)
@@ -361,6 +360,20 @@ def run_analyze_news_job():
         logger.error(f"❌ 뉴스 감성 분석 작업 스크립트 실행 실패: {e}")
 
 
+def run_migrate_neo4j_job():
+    """Neo4j 데이터 마이그레이션 백그라운드 작업"""
+    logger.info("=" * 60)
+    logger.info("🚀 일일 Neo4j 그래프 데이터 동기화 작업을 시작합니다 (06:30 KST)")
+    logger.info("=" * 60)
+    try:
+        from scripts.migrate_to_neo4j import migrate_to_neo4j
+
+        migrate_to_neo4j()
+        logger.info("✅ Neo4j 동기화 정상 완료")
+    except Exception as e:
+        logger.error(f"❌ Neo4j 동기화 작업 실패: {e}")
+
+
 def run_scheduler():
     """스케줄러 시작"""
     try:
@@ -392,9 +405,20 @@ def run_scheduler():
         replace_existing=True,
     )
 
+    # 매일 새벽 5시 0분(KST) 실행 - Neo4j 그래프DB 동기화
+    scheduler.add_job(
+        run_migrate_neo4j_job,
+        CronTrigger(hour=5, minute=0, timezone=kst),
+        id="migrate_neo4j_daily",
+        name="Daily Neo4j Graph DB Sync",
+        replace_existing=True,
+    )
+
     logger.info("=" * 60)
     logger.info("📅 S&P 500 스케줄러 시작")
-    logger.info("   실행 시간: 매일 05:00 KST")
+    logger.info(
+        "   실행 시간: 매일 05:00 KST (데이터 수집 & Neo4j 동기화) / 06:00 (뉴스 분석)"
+    )
     logger.info("   종료: Ctrl+C")
     logger.info("=" * 60)
 
@@ -441,6 +465,8 @@ def main():
     if args.test:
         logger.info("🧪 테스트 모드: 즉시 실행")
         collect_sp500_data()
+        run_analyze_news_job()
+        run_migrate_neo4j_job()
     else:
         run_scheduler()
 

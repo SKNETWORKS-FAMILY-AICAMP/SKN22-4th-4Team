@@ -3,7 +3,9 @@
 ```text
 SKN22-4th-4Team/
 ├── config/                     # Django 프로젝트 전역 설정 (settings, urls, wsgi)
+│   ├── celery.py               # Celery 앱 설정 정의
 ├── finance_app/                # 메인 Django 애플리케이션
+│   ├── tasks.py                # Celery 비동기 백그라운드 작업 (Report, News)
 │   ├── models.py               # DB 모델 (Watchlist, Notification)
 │   ├── views.py                # Views (Home, Chat SSE, Calendar, Watchlist/Notification API)
 │   ├── report_views.py         # Views (Report 생성 및 다운로드 API 분리)
@@ -47,8 +49,8 @@ SKN22-4th-4Team/
 │   └── images/                 # 스크린샷 및 이미지
 ├── 01_data_preprocessing/      # 데이터 전처리 과정 문서
 ├── 02_system_architecture/     # 시스템 아키텍처 문서
-├── models/                     # ML 모델 파일 (gitignored)
-├── fonts/                      # 폰트 파일 (gitignored)
+├── logs/                       # Application & Celery Worker 로그 모음
+├── docker-compose.yml          # Redis & Celery 컨테이너 구성 파일
 ├── manage.py                   # Django 관리 도구
 ├── requirements.txt            # 파이썬 의존성
 ├── .env                        # 환경 변수 설정 (gitignored)

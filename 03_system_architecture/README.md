@@ -14,8 +14,15 @@ graph TD
     subgraph Frontend Logic
         Login -->|Auth Request| Auth["🔐 Django Auth"]
         UI -->|Chat Query| Validator["🛡️ Input Validator"]
-        UI -->|Report Request| ReportGen["📝 Report Generator"]
+        UI -->|Report Request| ReportTask["⚡ Celery Task Queue"]
         UI -->|Manage Favorites| Watchlistmgr["⭐ Watchlist Manager"]
+    end
+
+    subgraph "Background Processing (Celery + Redis)"
+        ReportTask -->|Broker| Redis[("🟥 Redis Broker & Result Backend")]
+        Redis -->|Consume Task| CeleryWorker["⚙️ Celery Worker (heavy/default)"]
+        CeleryWorker -->|Generate| ReportGen["📝 Report Generator"]
+        CeleryWorker -->|Notify| UI
     end
 
     subgraph "Data & State"
@@ -57,6 +64,8 @@ graph TD
 
 ### 2. Backend & AI Engine
 
+- **Background Processing**:
+  - **Celery & Redis**: 시간이 오래 걸리는 투자 리포트 생성 및 뉴스 감성 분석 작업을 백그라운드 큐(heavy, default)로 분리 처리하여 타임아웃 방지 및 응답성 극대화
 - **RAG Engine**:
   - **Vector Store**: 텍스트 의미 검색 (Semantic Search)
   - **GraphRAG**: **Neo4j** Cypher 쿼리 + `NetworkX` 기반 기업 관계망 분석
@@ -134,11 +143,12 @@ graph TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Language**: Python 3.12
+- **Message Broker & Queue**: Celery, Redis
 - **LLM**: GPT-4.1-mini (기본) / Gemini 2.5 Flash (선택)
 - **Graph DB**: Neo4j (Cypher) + NetworkX (분석)
 - **Vector DB**: Supabase pgvector
 - **Tracing**: LangSmith (선택적)
-- **Key Libraries**: `google-generativeai`, `openai`, `neo4j`, `supabase`, `networkx`, `django`
+- **Key Libraries**: `celery`, `redis`, `google-generativeai`, `openai`, `neo4j`, `supabase`, `networkx`, `django`
 
 ## 📂 프로젝트 구조 (Directory Structure)
 

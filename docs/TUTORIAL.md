@@ -33,7 +33,7 @@ python -m venv venv
 source venv/bin/activate   # Mac/Linux
 # venv\Scripts\activate    # Windows
 
-# 3. 종속성 설치
+# 3. 종속성 설치 (Redis, Celery 등 포함)
 pip install -r requirements.txt
 
 # 4. 환경 변수 설정 (.env 파일 생성)
@@ -41,6 +41,10 @@ cp .env.example .env
 # .env 파일을 열어 API 키 입력
 
 # 5. 앱 실행
+# (선택) 빠른 비동기 레포트 처리 시 Redis 및 Celery 워커 가동이 필요합니다.
+# Mac/Linux: bash scripts/start_dev.sh
+# Windows: scripts\start_dev.bat
+
 streamlit run app.py
 ```
 
